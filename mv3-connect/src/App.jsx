@@ -159,6 +159,11 @@ const CHANTIERS_INIT = [
     prive: true, neuf: true, match: 92, tags: ["Résidence Les Alpes", "12 apparts", "Série de prix"],
   },
 ];
+const emptyChForm = () => ({
+  titre: "", categorie: "Carrelage", ville: "", adresse: "", typeBien: "Appartement", etage: "", numAppart: "", desc: "",
+  metres: { surfSol: 0, surfMur: 0, mlEtanch: 0, mlPlinthes: 0, mlSeuils: 0, mlJoints: 0, nbDouches: 0 },
+  budget: "10 000 – 25 000 CHF", delai: "Dans le mois", limite: "", prive: false, photos: [],
+});
 const NOTES_ENTREPRISES = { "MV-3 PRO Sàrl": 4.9, "Carrelage Dubuis Sàrl": 4.8, "Batisol Valais SA": 4.6, "Ceramica Rhône Sàrl": 4.4 };
 const SOUMISSIONS_SEED = [
   { id: "s1", chantierId: 1, entreprise: "Carrelage Dubuis Sàrl", total: 18450, delaiDebut: "12 août", duree: "8 j", garantie: "5 ans", statut: "En attente", date: "Il y a 2 j" },
@@ -201,11 +206,7 @@ export default function App() {
   const [selectedChantierId, setSelectedChantierId] = useState(1);
   const [pilotChantierId, setPilotChantierId] = useState(1);
   const [chStep, setChStep] = useState(0);
-  const [chForm, setChForm] = useState({
-    titre: "", categorie: "Carrelage", ville: "", desc: "",
-    metres: { surfSol: 0, surfMur: 0, mlEtanch: 0, mlPlinthes: 0, mlSeuils: 0, mlJoints: 0, nbDouches: 0 },
-    budget: "10 000 – 25 000 CHF", delai: "Dans le mois", limite: "", prive: false,
-  });
+  const [chForm, setChForm] = useState(emptyChForm());
   const [bidLines, setBidLines] = useState([]);
   const [bidMeta, setBidMeta] = useState({ delaiDebut: "", duree: "", garantie: "5 ans", remarques: "" });
   const [chatMsgs, setChatMsgs] = useState([
@@ -241,11 +242,16 @@ export default function App() {
   };
   /* --- Marketplace : publication de chantiers et soumissions structurées --- */
   const setMetre = (k, v) => setChForm(f => ({ ...f, metres: { ...f.metres, [k]: Math.max(0, v) } }));
+  const addChPhotos = files => {
+    const items = Array.from(files).map(f => ({ url: URL.createObjectURL(f), name: f.name }));
+    setChForm(f => ({ ...f, photos: [...f.photos, ...items] }));
+  };
+  const removeChPhoto = i => setChForm(f => ({ ...f, photos: f.photos.filter((_, j) => j !== i) }));
   const publishChantier = () => {
     const id = Math.max(0, ...chantiers.map(c => c.id)) + 1;
     setChantiers([{ ...chForm, id, statut: "Ouvert", neuf: true, match: 90, tags: [chForm.categorie] }, ...chantiers]);
     setChStep(0);
-    setChForm({ titre: "", categorie: "Carrelage", ville: "", desc: "", metres: { surfSol: 0, surfMur: 0, mlEtanch: 0, mlPlinthes: 0, mlSeuils: 0, mlJoints: 0, nbDouches: 0 }, budget: "10 000 – 25 000 CHF", delai: "Dans le mois", limite: "", prive: false });
+    setChForm(emptyChForm());
     go("chantierPublished");
   };
   const openBid = chantierId => {
@@ -876,6 +882,11 @@ export default function App() {
               <Tag key={k}>{METRES_LABELS[k][0]} : {v} {METRES_LABELS[k][1]}</Tag>
             ))}
           </div>
+          {ch.photos && ch.photos.length > 0 && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
+              {ch.photos.map((p, i) => <img key={i} src={p.url} alt={p.name} style={{ width: 64, height: 64, borderRadius: 9, objectFit: "cover" }} />)}
+            </div>
+          )}
         </Card>
         <Card style={{ marginTop: 10, background: T.redBg, border: "none" }}>
           <div style={{ display: "flex", gap: 8 }}>
@@ -1192,25 +1203,25 @@ export default function App() {
   );
 
   /* ================= ADMIN — PUBLIER UN CHANTIER ================= */
-  const CH_STEPS = ["Description du chantier", "Métrés", "Conditions", "Vérification"];
+  const CH_STEPS = ["Description du chantier", "Adresse", "Photos", "Métrés", "Conditions", "Vérification"];
+  const CH_LAST = CH_STEPS.length - 1;
   const AdminPublishScreen = () => {
-    const next = () => chStep < 3 ? setChStep(chStep + 1) : publishChantier();
+    const next = () => chStep < CH_LAST ? setChStep(chStep + 1) : publishChantier();
     const back = () => chStep > 0 ? setChStep(chStep - 1) : go("adminHome");
+    const showEtage = chForm.typeBien === "Appartement" || chForm.typeBien === "Immeuble";
     return (
       <div style={{ padding: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "6px 0 14px" }}>
           <button onClick={back} style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 9, padding: 8, cursor: "pointer", display: "flex" }}><ChevronLeft size={18} /></button>
           <div style={{ flex: 1 }}>
-            <TileProgress step={chStep + 1} total={4} />
-            <div style={{ ...S.sub, fontSize: 11, marginTop: 4 }}>Étape {chStep + 1} / 4</div>
+            <TileProgress step={chStep + 1} total={CH_STEPS.length} />
+            <div style={{ ...S.sub, fontSize: 11, marginTop: 4 }}>Étape {chStep + 1} / {CH_STEPS.length}</div>
           </div>
         </div>
         <h2 style={{ ...S.h1, fontSize: 22, margin: "0 0 16px" }}>{CH_STEPS[chStep]}</h2>
 
         {chStep === 0 && <div style={{ display: "grid", gap: 10 }}>
           <input placeholder="Titre (ex. Salle de bains complète — 7 m²)" value={chForm.titre} onChange={e => setChForm(f => ({ ...f, titre: e.target.value }))}
-            style={{ fontFamily: FONT, fontSize: 14, padding: "12px 14px", borderRadius: 10, border: `1px solid ${T.line}`, background: T.white, outline: "none" }} />
-          <input placeholder="Ville / commune (ex. Sion)" value={chForm.ville} onChange={e => setChForm(f => ({ ...f, ville: e.target.value }))}
             style={{ fontFamily: FONT, fontSize: 14, padding: "12px 14px", borderRadius: 10, border: `1px solid ${T.line}`, background: T.white, outline: "none" }} />
           <div style={S.label}>Catégorie</div>
           <div style={{ display: "grid", gap: 8 }}>
@@ -1222,6 +1233,49 @@ export default function App() {
         </div>}
 
         {chStep === 1 && <div style={{ display: "grid", gap: 10 }}>
+          <input placeholder="Ville / commune (ex. Sion)" value={chForm.ville} onChange={e => setChForm(f => ({ ...f, ville: e.target.value }))}
+            style={{ fontFamily: FONT, fontSize: 14, padding: "12px 14px", borderRadius: 10, border: `1px solid ${T.line}`, background: T.white, outline: "none" }} />
+          <input placeholder="Adresse (rue et numéro)" value={chForm.adresse} onChange={e => setChForm(f => ({ ...f, adresse: e.target.value }))}
+            style={{ fontFamily: FONT, fontSize: 14, padding: "12px 14px", borderRadius: 10, border: `1px solid ${T.line}`, background: T.white, outline: "none" }} />
+          <div style={S.label}>Type de bien</div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {["Appartement", "Villa", "Maison", "Immeuble", "Commerce"].map(o =>
+              <Chip key={o} active={chForm.typeBien === o} onClick={() => setChForm(f => ({ ...f, typeBien: o }))}>{o}</Chip>)}
+          </div>
+          {showEtage && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <input placeholder="Étage (ex. 2ᵉ étage)" value={chForm.etage} onChange={e => setChForm(f => ({ ...f, etage: e.target.value }))}
+              style={{ fontFamily: FONT, fontSize: 14, padding: "12px 14px", borderRadius: 10, border: `1px solid ${T.line}`, background: T.white, outline: "none" }} />
+            <input placeholder="N° d'appartement" value={chForm.numAppart} onChange={e => setChForm(f => ({ ...f, numAppart: e.target.value }))}
+              style={{ fontFamily: FONT, fontSize: 14, padding: "12px 14px", borderRadius: 10, border: `1px solid ${T.line}`, background: T.white, outline: "none" }} />
+          </div>}
+          <Card style={{ background: T.amberBg, border: "none" }}>
+            <div style={{ ...S.sub, color: T.amber, fontWeight: 600 }}>🔒 L'adresse exacte reste masquée aux entreprises jusqu'à l'acceptation d'une soumission — seules la ville et la distance approximative sont visibles avant.</div>
+          </Card>
+        </div>}
+
+        {chStep === 2 && <div style={{ display: "grid", gap: 10 }}>
+          <label style={{ background: T.white, border: `1.5px dashed ${T.line}`, borderRadius: 12, padding: "22px 14px", textAlign: "center", cursor: "pointer", display: "block" }}>
+            <input type="file" accept="image/*" multiple onChange={e => { addChPhotos(e.target.files); e.target.value = ""; }} style={{ display: "none" }} />
+            <Camera size={22} color={T.red} style={{ margin: "0 auto 8px" }} />
+            <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13.5 }}>Ajouter des photos du chantier</div>
+            <div style={{ ...S.sub, fontSize: 11.5, marginTop: 3 }}>État actuel, surfaces à traiter, accès</div>
+          </label>
+          {chForm.photos.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              {chForm.photos.map((p, i) => (
+                <div key={i} style={{ position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "1", background: T.soft }}>
+                  <img src={p.url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <button onClick={() => removeChPhoto(i)} style={{ position: "absolute", top: 4, right: 4, width: 22, height: 22, borderRadius: "50%", background: "rgba(22,24,28,.75)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <X size={13} color="#fff" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{ ...S.sub, fontSize: 12 }}>{chForm.photos.length} photo{chForm.photos.length > 1 ? "s" : ""} ajoutée{chForm.photos.length > 1 ? "s" : ""} · visibles par les entreprises invitées à soumissionner</div>
+        </div>}
+
+        {chStep === 3 && <div style={{ display: "grid", gap: 10 }}>
           <Card style={{ background: T.redBg, border: "none" }}>
             <div style={{ ...S.sub, color: T.red, fontWeight: 600 }}>Ces métrés servent à pré-remplir le bordereau de soumission (SIA/CAN) que rempliront les entreprises — quantité fixe, elles ne saisissent que leur prix.</div>
           </Card>
@@ -1239,7 +1293,7 @@ export default function App() {
           </Card>
         </div>}
 
-        {chStep === 2 && <div>
+        {chStep === 4 && <div>
           <div style={S.label}>Budget indicatif</div>
           <div style={{ display: "grid", gap: 8, margin: "8px 0 18px" }}>
             {["Je ne connais pas mon budget", "5 000 – 10 000 CHF", "10 000 – 25 000 CHF", "25 000 – 50 000 CHF"].map(b =>
@@ -1259,8 +1313,11 @@ export default function App() {
           </div>
         </div>}
 
-        {chStep === 3 && <div style={{ display: "grid", gap: 8 }}>
-          {[["Titre", chForm.titre || "—"], ["Catégorie", chForm.categorie], ["Ville", chForm.ville || "—"],
+        {chStep === 5 && <div style={{ display: "grid", gap: 8 }}>
+          {[["Titre", chForm.titre || "—"], ["Catégorie", chForm.categorie],
+          ["Adresse", [chForm.adresse, chForm.ville].filter(Boolean).join(", ") || "—"],
+          ["Type de bien", chForm.typeBien + (chForm.etage ? ` · ${chForm.etage}` : "") + (chForm.numAppart ? ` · N° ${chForm.numAppart}` : "")],
+          ["Photos", chForm.photos.length ? `${chForm.photos.length} photo${chForm.photos.length > 1 ? "s" : ""}` : "Aucune"],
           ["Métrés", Object.entries(chForm.metres).filter(([, v]) => v > 0).map(([k, v]) => `${METRES_LABELS[k][0]} ${v} ${METRES_LABELS[k][1]}`).join(" · ") || "—"],
           ["Budget", chForm.budget], ["Délai", chForm.delai], ["Limite de soumission", chForm.limite || "—"],
           ["Visibilité", chForm.prive ? "Invitation privée" : "Ouvert (max 4 soumissions)"]].map(([k, v]) => (
@@ -1269,10 +1326,15 @@ export default function App() {
               <span style={{ ...S.body, fontWeight: 700, textAlign: "right", maxWidth: "60%" }}>{v}</span>
             </Card>
           ))}
+          {chForm.photos.length > 0 && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {chForm.photos.map((p, i) => <img key={i} src={p.url} alt={p.name} style={{ width: 58, height: 58, borderRadius: 9, objectFit: "cover" }} />)}
+            </div>
+          )}
         </div>}
 
         <div style={{ marginTop: 22 }}>
-          <Btn onClick={next}>{chStep === 3 ? "Publier le chantier" : "Continuer"} <ChevronRight size={18} /></Btn>
+          <Btn onClick={next}>{chStep === CH_LAST ? "Publier le chantier" : "Continuer"} <ChevronRight size={18} /></Btn>
         </div>
       </div>
     );
