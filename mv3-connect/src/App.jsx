@@ -95,10 +95,35 @@ const VARIANTES = {
   Recommandé: { prix: "20'200", desc: "Fourniture et pose, carrelage Savoia standard", gar: "5 ans", lignes: [["Dépose et évacuation", "735"], ["Étanchéité complète", "980"], ["Fourniture Savoia 60×60", "1'890"], ["Fourniture murale 30×60", "2'095"], ["Pose sol + murs", "4'020"], ["Douche italienne complète", "2'450"]] },
   Premium: { prix: "23'900", desc: "Fournitures premium, protection, nettoyage final, garantie étendue", gar: "10 ans", lignes: [["Dépose et évacuation", "735"], ["Étanchéité + natte", "1'240"], ["Fourniture grès premium 120×60", "3'480"], ["Pose grand format", "4'890"], ["Douche italienne + niche LED", "3'180"], ["Protection + nettoyage final", "690"]] },
 };
-/* ---------------- Catalogue de soumission (bordereau type carrelage) ---------------- */
-// Grille de positions standard inspirée des catalogues CAN/CRB utilisés en Suisse romande :
+/* ---------------- Catalogues de soumission (bordereaux par métier) ---------------- */
+// Grilles de positions inspirées des catalogues CAN/CRB utilisés en Suisse romande :
 // chaque position a une unité fixe (m², ml, pce, forfait) et une quantité calculée depuis
 // les métrés du chantier publié. L'entreprise ne saisit que son prix unitaire.
+const METRES_SCHEMAS = {
+  Carrelage: {
+    surfSol: ["Surface sol", "m²"], surfMur: ["Surface murs", "m²"], mlEtanch: ["Étanchéité relevés", "ml"],
+    mlPlinthes: ["Plinthes", "ml"], mlSeuils: ["Seuils / profilés", "ml"], mlJoints: ["Joints de dilatation", "ml"],
+    nbDouches: ["Douches italiennes", "pce"],
+  },
+  "Salle de bains": {
+    surfSol: ["Surface sol", "m²"], surfMur: ["Surface murs", "m²"], mlEtanch: ["Étanchéité relevés", "ml"],
+    mlPlinthes: ["Plinthes", "ml"], mlSeuils: ["Seuils / profilés", "ml"], mlJoints: ["Joints de dilatation", "ml"],
+    nbDouches: ["Douches italiennes", "pce"],
+  },
+  Parquet: {
+    surfDepose: ["Surface à déposer", "m²"], surfPose: ["Surface à poser", "m²"],
+    mlPlinthes: ["Plinthes", "ml"], surfPoncage: ["Ponçage / vitrification", "m²"], nbSeuils: ["Seuils de porte", "pce"],
+  },
+  Sanitaire: {
+    nbAppareils: ["Appareils sanitaires", "pce"], nbPointsEau: ["Points d'eau", "pce"],
+    mlTuyauterie: ["Tuyauterie", "ml"], nbRadiateurs: ["Radiateurs", "pce"],
+  },
+  Rénovation: {
+    surfSol: ["Surface sol", "m²"], surfMur: ["Surface murs", "m²"], mlCloisons: ["Cloisons", "ml"], nbPieces: ["Pièces concernées", "pce"],
+  },
+};
+const metresDefaut = categorie => Object.fromEntries(Object.keys(METRES_SCHEMAS[categorie] || METRES_SCHEMAS.Carrelage).map(k => [k, 0]));
+
 const CATALOGUE_CARRELAGE = [
   { code: "111.1", d: "Installation de chantier et protections", u: "forfait", qKey: null },
   { code: "221.2", d: "Dépose de l'ancien revêtement", u: "m²", qKey: "surfSol" },
@@ -114,19 +139,59 @@ const CATALOGUE_CARRELAGE = [
   { code: "251.4", d: "Douche italienne complète (receveur à carreler)", u: "pce", qKey: "nbDouches" },
   { code: "299.0", d: "Nettoyage fin de chantier", u: "forfait", qKey: null },
 ];
+const CATALOGUES = {
+  Carrelage: CATALOGUE_CARRELAGE,
+  "Salle de bains": CATALOGUE_CARRELAGE,
+  Parquet: [
+    { code: "622.1", d: "Dépose de l'ancien revêtement", u: "m²", qKey: "surfDepose" },
+    { code: "622.3", d: "Préparation et ragréage du support", u: "m²", qKey: "surfPose" },
+    { code: "631.1", d: "Fourniture et pose parquet", u: "m²", qKey: "surfPose" },
+    { code: "631.5", d: "Pose plinthes", u: "ml", qKey: "mlPlinthes" },
+    { code: "631.8", d: "Ponçage et vitrification", u: "m²", qKey: "surfPoncage" },
+    { code: "631.9", d: "Seuils de porte", u: "pce", qKey: "nbSeuils" },
+    { code: "299.0", d: "Nettoyage fin de chantier", u: "forfait", qKey: null },
+  ],
+  Sanitaire: [
+    { code: "421.1", d: "Dépose des appareils sanitaires existants", u: "pce", qKey: "nbAppareils" },
+    { code: "421.4", d: "Raccordement des points d'eau", u: "pce", qKey: "nbPointsEau" },
+    { code: "421.6", d: "Pose de tuyauterie", u: "ml", qKey: "mlTuyauterie" },
+    { code: "422.1", d: "Fourniture et pose appareils sanitaires", u: "pce", qKey: "nbAppareils" },
+    { code: "422.5", d: "Fourniture et pose radiateurs", u: "pce", qKey: "nbRadiateurs" },
+    { code: "429.0", d: "Mise en service et tests d'étanchéité", u: "forfait", qKey: null },
+  ],
+  Rénovation: [
+    { code: "111.1", d: "Installation de chantier et protections", u: "forfait", qKey: null },
+    { code: "201.1", d: "Démolition et évacuation", u: "forfait", qKey: null },
+    { code: "211.2", d: "Cloisons à créer ou déplacer", u: "ml", qKey: "mlCloisons" },
+    { code: "228.1", d: "Préparation des supports", u: "m²", qKey: "surfSol" },
+    { code: "281.1", d: "Finitions sol", u: "m²", qKey: "surfSol" },
+    { code: "282.1", d: "Finitions murs", u: "m²", qKey: "surfMur" },
+    { code: "299.0", d: "Nettoyage fin de chantier", u: "forfait", qKey: null },
+  ],
+};
 // Prix de référence marché (CHF), affichés à titre indicatif — l'entreprise reste libre de son prix.
 const PRIX_REF = {
   "111.1": 250, "221.2": 35, "221.4": 180, "228.1": 28, "271.3": 42, "271.5": 38,
   "241.1": 95, "241.3": 88, "241.6": 24, "241.8": 32, "241.9": 12, "251.4": 1850, "299.0": 220,
+  "622.1": 28, "622.3": 18, "631.1": 110, "631.5": 22, "631.8": 45, "631.9": 85,
+  "421.1": 120, "421.4": 180, "421.6": 45, "422.1": 650, "422.5": 420, "429.0": 150,
+  "201.1": 850, "211.2": 95, "281.1": 60, "282.1": 55,
 };
-const METRES_LABELS = {
-  surfSol: ["Surface sol", "m²"], surfMur: ["Surface murs", "m²"], mlEtanch: ["Étanchéité relevés", "ml"],
-  mlPlinthes: ["Plinthes", "ml"], mlSeuils: ["Seuils / profilés", "ml"], mlJoints: ["Joints de dilatation", "ml"],
-  nbDouches: ["Douches italiennes", "pce"],
-};
-const buildBoqLines = metres => CATALOGUE_CARRELAGE
+const buildBoqLines = (categorie, metres) => (CATALOGUES[categorie] || CATALOGUES.Carrelage)
   .map(p => ({ code: p.code, d: p.d, u: p.u, q: p.qKey ? (metres[p.qKey] || 0) : 1, pu: PRIX_REF[p.code] || 0 }))
   .filter(l => l.q > 0);
+const ENTREPRISES_DISPO = [
+  { nom: "MV-3 PRO Sàrl", note: 4.9, zone: "Sion · 3 km" },
+  { nom: "Carrelage Dubuis Sàrl", note: 4.8, zone: "Sion · 5 km" },
+  { nom: "Batisol Valais SA", note: 4.6, zone: "Conthey · 9 km" },
+  { nom: "Ceramica Rhône Sàrl", note: 4.4, zone: "Sierre · 28 km" },
+];
+const JALONS_DEFAULT = () => [
+  { id: "acompte", label: "Acompte 30 % reçu", done: false },
+  { id: "debut", label: "Début des travaux", done: false },
+  { id: "cours", label: "Travaux en cours 30 %", done: false },
+  { id: "reception", label: "Réception et solde 10 %", done: false },
+];
 
 /* ---------------- Chantiers publiés (marketplace) ---------------- */
 const CHANTIERS_INIT = [
@@ -157,12 +222,13 @@ const CHANTIERS_INIT = [
     metres: { surfSol: 640, surfMur: 380, mlEtanch: 120, mlPlinthes: 210, mlSeuils: 38, mlJoints: 96, nbDouches: 12 },
     budget: "180 000 CHF", delai: "Dans le mois", limite: "10 juillet", statut: "Ouvert",
     prive: true, neuf: true, match: 92, tags: ["Résidence Les Alpes", "12 apparts", "Série de prix"],
+    invites: ["MV-3 PRO Sàrl", "Carrelage Dubuis Sàrl", "Batisol Valais SA", "Ceramica Rhône Sàrl"],
   },
 ];
 const emptyChForm = () => ({
   titre: "", categorie: "Carrelage", ville: "", adresse: "", typeBien: "Appartement", etage: "", numAppart: "", desc: "",
-  metres: { surfSol: 0, surfMur: 0, mlEtanch: 0, mlPlinthes: 0, mlSeuils: 0, mlJoints: 0, nbDouches: 0 },
-  budget: "10 000 – 25 000 CHF", delai: "Dans le mois", limite: "", prive: false, photos: [],
+  metres: metresDefaut("Carrelage"),
+  budget: "10 000 – 25 000 CHF", delai: "Dans le mois", limite: "", prive: false, invites: [], photos: [],
 });
 const NOTES_ENTREPRISES = { "MV-3 PRO Sàrl": 4.9, "Carrelage Dubuis Sàrl": 4.8, "Batisol Valais SA": 4.6, "Ceramica Rhône Sàrl": 4.4 };
 const SOUMISSIONS_SEED = [
@@ -172,6 +238,18 @@ const SOUMISSIONS_SEED = [
   { id: "s4", chantierId: 4, entreprise: "Batisol Valais SA", total: 172550, delaiDebut: "sept.", duree: "32 j", garantie: "2 ans", statut: "En attente", date: "Il y a 4 j" },
   { id: "s5", chantierId: 4, entreprise: "Ceramica Rhône Sàrl", total: 181900, delaiDebut: "sept.", duree: "34 j", garantie: "2 ans", statut: "Perdue", date: "Il y a 5 j" },
   { id: "s6", chantierId: 2, entreprise: "MV-3 PRO Sàrl", total: 6120, delaiDebut: "29 juillet", duree: "3 j", garantie: "5 ans", statut: "Gagnée", date: "La semaine dernière" },
+];
+const SUIVIS_SEED = [
+  {
+    id: "suivi-s6", chantierId: 2, soumissionId: "s6", entreprise: "MV-3 PRO Sàrl",
+    jalons: [
+      { id: "acompte", label: "Acompte 30 % reçu", done: true },
+      { id: "debut", label: "Début des travaux", done: true },
+      { id: "cours", label: "Travaux en cours 30 %", done: false },
+      { id: "reception", label: "Réception et solde 10 %", done: false },
+    ],
+    photos: { avant: [], pendant: [], apres: [] }, statut: "En cours",
+  },
 ];
 const LOTS = [
   { n: "Lot 01 — Démolition", st: "Adjugé", c: T.sub, bg: T.soft, info: "Démo Valais SA · 84'500 CHF" },
@@ -203,8 +281,11 @@ export default function App() {
   const [review, setReview] = useState({ q: 5, prix: 5, delai: 4, com: 5, prop: 5, sav: 5, done: false });
   const [chantiers, setChantiers] = useState(CHANTIERS_INIT);
   const [soumissions, setSoumissions] = useState(SOUMISSIONS_SEED);
+  const [suivis, setSuivis] = useState(SUIVIS_SEED);
+  const [notifications, setNotifications] = useState([]);
   const [selectedChantierId, setSelectedChantierId] = useState(1);
   const [pilotChantierId, setPilotChantierId] = useState(1);
+  const [suiviId, setSuiviId] = useState(null);
   const [chStep, setChStep] = useState(0);
   const [chForm, setChForm] = useState(emptyChForm());
   const [bidLines, setBidLines] = useState([]);
@@ -241,7 +322,10 @@ export default function App() {
     go(r === "pro" ? "proHome" : r === "promo" ? "promoHome" : r === "admin" ? "adminHome" : "home");
   };
   /* --- Marketplace : publication de chantiers et soumissions structurées --- */
+  const notify = (role, titre, texte, color) => setNotifications(n => [{ id: "n" + Date.now() + Math.random(), role, titre, texte, color, date: "À l'instant" }, ...n]);
   const setMetre = (k, v) => setChForm(f => ({ ...f, metres: { ...f.metres, [k]: Math.max(0, v) } }));
+  const setChCategorie = cat => setChForm(f => ({ ...f, categorie: cat, metres: metresDefaut(cat) }));
+  const toggleInvite = nom => setChForm(f => ({ ...f, invites: f.invites.includes(nom) ? f.invites.filter(x => x !== nom) : [...f.invites, nom] }));
   const addChPhotos = files => {
     const items = Array.from(files).map(f => ({ url: URL.createObjectURL(f), name: f.name }));
     setChForm(f => ({ ...f, photos: [...f.photos, ...items] }));
@@ -250,6 +334,7 @@ export default function App() {
   const publishChantier = () => {
     const id = Math.max(0, ...chantiers.map(c => c.id)) + 1;
     setChantiers([{ ...chForm, id, statut: "Ouvert", neuf: true, match: 90, tags: [chForm.categorie] }, ...chantiers]);
+    notify("pro", "Nouveau chantier publié", `${chForm.titre || chForm.categorie} — ${chForm.ville || "lieu à confirmer"}`, T.red);
     setChStep(0);
     setChForm(emptyChForm());
     go("chantierPublished");
@@ -257,23 +342,52 @@ export default function App() {
   const openBid = chantierId => {
     const ch = chantiers.find(c => c.id === chantierId);
     setSelectedChantierId(chantierId);
-    setBidLines(buildBoqLines(ch.metres));
+    setBidLines(buildBoqLines(ch.categorie, ch.metres));
     setBidMeta({ delaiDebut: "", duree: "", garantie: "5 ans", remarques: "" });
     go("proBid");
   };
   const updateBidLine = (i, field, value) => setBidLines(ls => ls.map((l, j) => j === i ? { ...l, [field]: Math.max(0, Number(value) || 0) } : l));
   const bidTotal = bidLines.reduce((s, l) => s + l.q * l.pu, 0);
   const submitBid = () => {
+    const ch = chantiers.find(c => c.id === selectedChantierId);
     setSoumissions(s => [{
       id: "s" + Date.now(), chantierId: selectedChantierId, entreprise: "MV-3 PRO Sàrl",
       lignes: bidLines, total: Math.round(bidTotal * 1.081), delaiDebut: bidMeta.delaiDebut || "À convenir",
       duree: bidMeta.duree || "—", garantie: bidMeta.garantie, remarques: bidMeta.remarques, statut: "En attente", date: "À l'instant",
     }, ...s]);
+    notify("admin", "Nouvelle soumission reçue", `MV-3 PRO Sàrl — ${ch ? ch.titre : "chantier"} · ${Math.round(bidTotal * 1.081).toLocaleString("fr-CH")} CHF`, T.red);
     go("proSent");
   };
   const adjuger = (chantierId, soumissionId) => {
-    setSoumissions(s => s.map(x => x.chantierId !== chantierId ? x : { ...x, statut: x.id === soumissionId ? "Gagnée" : "Perdue" }));
+    const ch = chantiers.find(c => c.id === chantierId);
+    setSoumissions(s => {
+      const updated = s.map(x => x.chantierId !== chantierId ? x : { ...x, statut: x.id === soumissionId ? "Gagnée" : "Perdue" });
+      const gagnante = updated.find(x => x.id === soumissionId);
+      if (gagnante) {
+        setSuivis(sv => sv.some(x => x.soumissionId === soumissionId) ? sv : [{
+          id: "suivi-" + soumissionId, chantierId, soumissionId, entreprise: gagnante.entreprise,
+          jalons: JALONS_DEFAULT(), photos: { avant: [], pendant: [], apres: [] }, statut: "En cours",
+        }, ...sv]);
+        if (gagnante.entreprise === "MV-3 PRO Sàrl") notify("pro", "Chantier gagné 🎉", `${ch ? ch.titre : "Chantier"} — contrat attribué`, T.green);
+      }
+      updated.filter(x => x.chantierId === chantierId && x.id !== soumissionId && x.entreprise === "MV-3 PRO Sàrl")
+        .forEach(() => notify("pro", "Soumission non retenue", `${ch ? ch.titre : "Chantier"} — une autre entreprise a été choisie`, T.sub));
+      return updated;
+    });
     setChantiers(cs => cs.map(c => c.id === chantierId ? { ...c, statut: "Attribué" } : c));
+  };
+  const toggleJalon = (sid, jid) => setSuivis(sv => sv.map(s => s.id !== sid ? s : {
+    ...s, jalons: s.jalons.map(j => j.id === jid ? { ...j, done: !j.done } : j),
+  }));
+  const addSuiviPhoto = (sid, cat, files) => {
+    const items = Array.from(files).map(f => ({ url: URL.createObjectURL(f), name: f.name }));
+    setSuivis(sv => sv.map(s => s.id !== sid ? s : { ...s, photos: { ...s.photos, [cat]: [...s.photos[cat], ...items] } }));
+  };
+  const removeSuiviPhoto = (sid, cat, i) => setSuivis(sv => sv.map(s => s.id !== sid ? s : { ...s, photos: { ...s.photos, [cat]: s.photos[cat].filter((_, j) => j !== i) } }));
+  const finirChantier = sid => {
+    setSuivis(sv => sv.map(s => s.id !== sid ? s : { ...s, statut: "Terminé", jalons: s.jalons.map(j => ({ ...j, done: true })) }));
+    const suivi = suivis.find(s => s.id === sid);
+    if (suivi) setChantiers(cs => cs.map(c => c.id === suivi.chantierId ? { ...c, statut: "Terminé" } : c));
   };
 
   /* --- Analyse IA réelle (API Anthropic) --- */
@@ -841,7 +955,7 @@ export default function App() {
         ))}
       </div>
       <div style={{ display: "grid", gap: 10 }}>
-        {chantiers.filter(c => c.statut === "Ouvert").map(o => {
+        {chantiers.filter(c => c.statut === "Ouvert" && (!c.prive || (c.invites || []).includes("MV-3 PRO Sàrl"))).map(o => {
           const nbSoum = soumissions.filter(s => s.chantierId === o.id).length;
           return (
             <Card key={o.id} onClick={() => { setSelectedChantierId(o.id); go("proOpp"); }} style={o.prive ? { borderLeft: `4px solid ${T.ink}` } : {}}>
@@ -878,9 +992,10 @@ export default function App() {
           <div style={S.label}>Dossier</div>
           <div style={{ ...S.body, marginTop: 6 }}>{ch.desc}</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
-            {Object.entries(ch.metres).filter(([, v]) => v > 0).map(([k, v]) => (
-              <Tag key={k}>{METRES_LABELS[k][0]} : {v} {METRES_LABELS[k][1]}</Tag>
-            ))}
+            {Object.entries(ch.metres).filter(([, v]) => v > 0).map(([k, v]) => {
+              const schema = METRES_SCHEMAS[ch.categorie] || METRES_SCHEMAS.Carrelage;
+              return schema[k] ? <Tag key={k}>{schema[k][0]} : {v} {schema[k][1]}</Tag> : null;
+            })}
           </div>
           {ch.photos && ch.photos.length > 0 && (
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 10 }}>
@@ -969,8 +1084,10 @@ export default function App() {
         {mine.map(s => {
           const ch = chantiers.find(c => c.id === s.chantierId);
           const [c, bg] = statusStyle(s.statut);
+          const suivi = suivis.find(sv => sv.soumissionId === s.id);
           return (
-            <Card key={s.id} style={{ marginBottom: 10 }}>
+            <Card key={s.id} style={{ marginBottom: 10 }}
+              onClick={suivi ? () => { setSuiviId(suivi.id); go("suivi"); } : undefined}>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15 }}>{ch ? ch.titre : "Chantier"}</div>
@@ -978,6 +1095,12 @@ export default function App() {
                 </div>
                 <Tag color={c} bg={bg}>{s.statut === "Gagnée" ? "Gagnée ✓" : s.statut}</Tag>
               </div>
+              {suivi && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
+                  <span style={{ ...S.sub, fontSize: 12 }}>{suivi.jalons.filter(j => j.done).length} / {suivi.jalons.length} jalons · {suivi.statut}</span>
+                  <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: T.red, display: "flex", alignItems: "center", gap: 3 }}>Voir le suivi <ChevronRight size={14} /></span>
+                </div>
+              )}
             </Card>
           );
         })}
@@ -1226,7 +1349,7 @@ export default function App() {
           <div style={S.label}>Catégorie</div>
           <div style={{ display: "grid", gap: 8 }}>
             {["Carrelage", "Parquet", "Salle de bains", "Sanitaire", "Rénovation"].map(o =>
-              <Chip key={o} active={chForm.categorie === o} onClick={() => setChForm(f => ({ ...f, categorie: o }))}>{o}</Chip>)}
+              <Chip key={o} active={chForm.categorie === o} onClick={() => setChCategorie(o)}>{o}</Chip>)}
           </div>
           <textarea placeholder="Description des travaux demandés…" value={chForm.desc} onChange={e => setChForm(f => ({ ...f, desc: e.target.value }))}
             style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT, fontSize: 14, padding: 13, borderRadius: 12, border: `1px solid ${T.line}`, background: T.white, minHeight: 90, resize: "none", outline: "none" }} />
@@ -1280,8 +1403,8 @@ export default function App() {
             <div style={{ ...S.sub, color: T.red, fontWeight: 600 }}>Ces métrés servent à pré-remplir le bordereau de soumission (SIA/CAN) que rempliront les entreprises — quantité fixe, elles ne saisissent que leur prix.</div>
           </Card>
           <Card>
-            {Object.entries(METRES_LABELS).map(([k, [lbl, u]]) => (
-              <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderTop: k !== "surfSol" ? `1px solid ${T.line}` : "none" }}>
+            {Object.entries(METRES_SCHEMAS[chForm.categorie] || METRES_SCHEMAS.Carrelage).map(([k, [lbl, u]], i) => (
+              <div key={k} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 0", borderTop: i ? `1px solid ${T.line}` : "none" }}>
                 <span style={{ ...S.body, fontWeight: 600, fontSize: 13.5 }}>{lbl} <span style={{ color: T.sub, fontSize: 11.5 }}>({u})</span></span>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <button onClick={() => setMetre(k, chForm.metres[k] - 1)} style={{ width: 28, height: 28, borderRadius: 7, border: `1px solid ${T.line}`, background: T.white, cursor: "pointer" }}><Minus size={12} /></button>
@@ -1311,6 +1434,25 @@ export default function App() {
             <Chip active={!chForm.prive} onClick={() => setChForm(f => ({ ...f, prive: false }))}>Ouvert à toutes les entreprises vérifiées (max 4 soumissions)</Chip>
             <Chip active={chForm.prive} onClick={() => setChForm(f => ({ ...f, prive: true }))}>Sur invitation privée uniquement</Chip>
           </div>
+          {chForm.prive && <>
+            <div style={{ ...S.label, margin: "18px 0 8px" }}>Entreprises invitées</div>
+            <div style={{ display: "grid", gap: 8 }}>
+              {ENTREPRISES_DISPO.map(e => {
+                const on = chForm.invites.includes(e.nom);
+                return (
+                  <Card key={e.nom} onClick={() => toggleInvite(e.nom)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", ...(on ? { border: `2px solid ${T.red}` } : {}) }}>
+                    <div>
+                      <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14 }}>{e.nom}</div>
+                      <div style={{ ...S.sub, fontSize: 12.5 }}>{e.note} ★ · {e.zone}</div>
+                    </div>
+                    <div style={{ width: 24, height: 24, borderRadius: 7, border: on ? "none" : `2px solid ${T.line}`, background: on ? T.red : T.white, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {on && <Check size={15} color="#fff" strokeWidth={3} />}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </>}
         </div>}
 
         {chStep === 5 && <div style={{ display: "grid", gap: 8 }}>
@@ -1318,9 +1460,13 @@ export default function App() {
           ["Adresse", [chForm.adresse, chForm.ville].filter(Boolean).join(", ") || "—"],
           ["Type de bien", chForm.typeBien + (chForm.etage ? ` · ${chForm.etage}` : "") + (chForm.numAppart ? ` · N° ${chForm.numAppart}` : "")],
           ["Photos", chForm.photos.length ? `${chForm.photos.length} photo${chForm.photos.length > 1 ? "s" : ""}` : "Aucune"],
-          ["Métrés", Object.entries(chForm.metres).filter(([, v]) => v > 0).map(([k, v]) => `${METRES_LABELS[k][0]} ${v} ${METRES_LABELS[k][1]}`).join(" · ") || "—"],
+          ["Métrés", Object.entries(chForm.metres).filter(([, v]) => v > 0).map(([k, v]) => {
+            const schema = METRES_SCHEMAS[chForm.categorie] || METRES_SCHEMAS.Carrelage;
+            return schema[k] ? `${schema[k][0]} ${v} ${schema[k][1]}` : null;
+          }).filter(Boolean).join(" · ") || "—"],
           ["Budget", chForm.budget], ["Délai", chForm.delai], ["Limite de soumission", chForm.limite || "—"],
-          ["Visibilité", chForm.prive ? "Invitation privée" : "Ouvert (max 4 soumissions)"]].map(([k, v]) => (
+          ["Visibilité", chForm.prive ? "Invitation privée" : "Ouvert (max 4 soumissions)"],
+          ...(chForm.prive ? [["Entreprises invitées", chForm.invites.length ? chForm.invites.join(" · ") : "Aucune sélectionnée"]] : [])].map(([k, v]) => (
             <Card key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px" }}>
               <span style={{ ...S.sub, fontWeight: 700 }}>{k}</span>
               <span style={{ ...S.body, fontWeight: 700, textAlign: "right", maxWidth: "60%" }}>{v}</span>
@@ -1429,11 +1575,23 @@ export default function App() {
   const AdminChantierCompareScreen = () => {
     const ch = chantiers.find(c => c.id === pilotChantierId) || chantiers[0];
     const mine = soumissions.filter(s => s.chantierId === ch.id).sort((a, b) => a.total - b.total);
+    const suivi = suivis.find(sv => sv.chantierId === ch.id);
     return (
       <div style={{ padding: 16 }}>
         <Back onClick={() => go("adminPilot")} label="Pilotage marketplace" />
         <h1 style={{ ...S.h1, fontSize: 21 }}>{ch.titre}</h1>
         <p style={{ ...S.sub, margin: "4px 0 14px" }}>{ch.ville} · {mine.length} soumission{mine.length > 1 ? "s" : ""} · statut {ch.statut}</p>
+        {suivi && (
+          <Card onClick={() => { setSuiviId(suivi.id); go("suivi"); }} style={{ marginBottom: 10, background: T.greenBg, border: "none" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: T.green }}>Suivi du chantier — {suivi.entreprise}</div>
+                <div style={{ ...S.sub, fontSize: 12 }}>{suivi.jalons.filter(j => j.done).length} / {suivi.jalons.length} jalons · {suivi.statut}</div>
+              </div>
+              <ChevronRight size={17} color={T.green} />
+            </div>
+          </Card>
+        )}
         <div style={{ display: "grid", gap: 8 }}>
           {mine.map(s => (
             <Card key={s.id} style={s.statut === "Gagnée" ? { border: `2px solid ${T.green}` } : {}}>
@@ -1452,6 +1610,77 @@ export default function App() {
           ))}
           {!mine.length && <Card><div style={S.sub}>Aucune soumission reçue pour ce chantier pour l'instant.</div></Card>}
         </div>
+      </div>
+    );
+  };
+
+  /* ================= SUIVI DE CHANTIER (après adjudication) ================= */
+  const SuiviScreen = () => {
+    const suivi = suivis.find(s => s.id === suiviId);
+    const backTarget = role === "admin" ? "adminChantierCompare" : "proSent";
+    if (!suivi) return (
+      <div style={{ padding: 16 }}>
+        <Back onClick={() => go(backTarget)} label="Retour" />
+        <div style={S.sub}>Aucun suivi disponible.</div>
+      </div>
+    );
+    const ch = chantiers.find(c => c.id === suivi.chantierId);
+    const pct = Math.round((suivi.jalons.filter(j => j.done).length / suivi.jalons.length) * 100);
+    const PHOTO_CATS = [["avant", "Avant"], ["pendant", "Pendant"], ["apres", "Après"]];
+    return (
+      <div style={{ padding: 16 }}>
+        <Back onClick={() => go(backTarget)} label="Retour" />
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <h1 style={{ ...S.h1, fontSize: 21 }}>{ch ? ch.titre : "Chantier"}</h1>
+          <Tag color={suivi.statut === "Terminé" ? T.green : T.amber} bg={suivi.statut === "Terminé" ? T.greenBg : T.amberBg}>{suivi.statut}</Tag>
+        </div>
+        <p style={{ ...S.sub, margin: "4px 0 16px" }}>{suivi.entreprise}{ch ? ` · ${ch.ville}` : ""}</p>
+
+        <Card>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={S.label}>Avancement</span>
+            <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13 }}>{pct} %</span>
+          </div>
+          <div style={{ height: 8, background: T.soft, borderRadius: 4 }}>
+            <div style={{ height: 8, width: `${pct}%`, background: T.green, borderRadius: 4, transition: "width .3s" }} />
+          </div>
+        </Card>
+
+        <div style={{ ...S.label, margin: "16px 0 8px" }}>Jalons</div>
+        <Card>
+          {suivi.jalons.map((j, i) => (
+            <div key={j.id} onClick={() => toggleJalon(suivi.id, j.id)} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 0", borderTop: i ? `1px solid ${T.line}` : "none", cursor: "pointer" }}>
+              {j.done ? <CheckCircle2 size={19} color={T.green} /> : <Clock size={19} color={T.sub} />}
+              <span style={{ ...S.body, fontWeight: 700, fontSize: 13.5, color: j.done ? T.ink : T.sub }}>{j.label}</span>
+            </div>
+          ))}
+        </Card>
+
+        {PHOTO_CATS.map(([cat, lbl]) => (
+          <div key={cat}>
+            <div style={{ ...S.label, margin: "16px 0 8px" }}>Photos — {lbl}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              {suivi.photos[cat].map((p, i) => (
+                <div key={i} style={{ position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "1", background: T.soft }}>
+                  <img src={p.url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  <button onClick={() => removeSuiviPhoto(suivi.id, cat, i)} style={{ position: "absolute", top: 4, right: 4, width: 20, height: 20, borderRadius: "50%", background: "rgba(22,24,28,.75)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <X size={11} color="#fff" />
+                  </button>
+                </div>
+              ))}
+              <label style={{ background: T.white, border: `1.5px dashed ${T.line}`, borderRadius: 10, aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                <input type="file" accept="image/*" multiple onChange={e => { addSuiviPhoto(suivi.id, cat, e.target.files); e.target.value = ""; }} style={{ display: "none" }} />
+                <Camera size={18} color={T.sub} />
+              </label>
+            </div>
+          </div>
+        ))}
+
+        {suivi.statut !== "Terminé" && (
+          <div style={{ marginTop: 18 }}>
+            <Btn kind="green" onClick={() => finirChantier(suivi.id)}><CheckCircle2 size={18} /> Marquer le chantier terminé</Btn>
+          </div>
+        )}
       </div>
     );
   };
@@ -1655,10 +1884,12 @@ export default function App() {
       ["Il y a 1 h", "Document expiré", "Assurance RC — Batisol Valais SA · suspension dans 5 jours", T.amber],
       ["Hier", "Litige ouvert", "Chantier #1847 — preuves demandées aux deux parties", T.amber]],
     };
+    const live = notifications.filter(n => n.role === role).map(n => [n.date, n.titre, n.texte, n.color]);
+    const feed = [...live, ...N[role]];
     return (
       <div style={{ padding: 16 }}>
         <h1 style={{ ...S.h1, margin: "10px 0 16px" }}>Notifications</h1>
-        {N[role].map(([d, t, s, c], i) => (
+        {feed.map(([d, t, s, c], i) => (
           <Card key={i} style={{ marginBottom: 8, borderLeft: `4px solid ${c}` }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
               <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14 }}>{t}</div>
@@ -1735,6 +1966,7 @@ export default function App() {
     adminHome: AdminHomeScreen, adminQueue: AdminQueueScreen, adminRequest: AdminRequestScreen,
     adminPublish: AdminPublishScreen, chantierPublished: ChantierPublishedScreen,
     adminPilot: AdminPilotScreen, adminChantierCompare: AdminChantierCompareScreen,
+    suivi: SuiviScreen,
     profile: ProfileScreen,
   };
 
