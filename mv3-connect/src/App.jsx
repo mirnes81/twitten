@@ -248,7 +248,7 @@ const SUIVIS_SEED = [
       { id: "cours", label: "Travaux en cours 30 %", done: false },
       { id: "reception", label: "Réception et solde 10 %", done: false },
     ],
-    photos: { avant: [], pendant: [], apres: [] }, statut: "En cours",
+    photos: { avant: [], pendant: [], apres: [] }, documents: [], statut: "En cours",
   },
 ];
 const LOTS = [
@@ -286,6 +286,8 @@ export default function App() {
   const [selectedChantierId, setSelectedChantierId] = useState(1);
   const [pilotChantierId, setPilotChantierId] = useState(1);
   const [suiviId, setSuiviId] = useState(null);
+  const [pdfSoumissionId, setPdfSoumissionId] = useState(null);
+  const [chatChantierId, setChatChantierId] = useState(null);
   const [chStep, setChStep] = useState(0);
   const [chForm, setChForm] = useState(emptyChForm());
   const [bidLines, setBidLines] = useState([]);
@@ -311,7 +313,10 @@ export default function App() {
     l.href = "https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800;900&display=swap";
     document.head.appendChild(l);
     const st = document.createElement("style");
-    st.textContent = "@keyframes spin{to{transform:rotate(360deg)}}";
+    st.textContent = "@keyframes spin{to{transform:rotate(360deg)}}" +
+      "@media print{body *{visibility:hidden}.pdf-doc,.pdf-doc *{visibility:visible}" +
+      ".pdf-doc{position:absolute;left:0;top:0;box-shadow:none!important;margin:0!important}" +
+      ".no-print{display:none!important}@page{size:A4;margin:0}}";
     document.head.appendChild(st);
   }, []);
 
@@ -366,7 +371,7 @@ export default function App() {
       if (gagnante) {
         setSuivis(sv => sv.some(x => x.soumissionId === soumissionId) ? sv : [{
           id: "suivi-" + soumissionId, chantierId, soumissionId, entreprise: gagnante.entreprise,
-          jalons: JALONS_DEFAULT(), photos: { avant: [], pendant: [], apres: [] }, statut: "En cours",
+          jalons: JALONS_DEFAULT(), photos: { avant: [], pendant: [], apres: [] }, documents: [], statut: "En cours",
         }, ...sv]);
         if (gagnante.entreprise === "MV-3 PRO Sàrl") notify("pro", "Chantier gagné 🎉", `${ch ? ch.titre : "Chantier"} — contrat attribué`, T.green);
       }
@@ -389,6 +394,13 @@ export default function App() {
     const suivi = suivis.find(s => s.id === sid);
     if (suivi) setChantiers(cs => cs.map(c => c.id === suivi.chantierId ? { ...c, statut: "Terminé" } : c));
   };
+  const addSuiviDoc = (sid, jalonId, file) => {
+    if (!file) return;
+    const doc = { id: "doc" + Date.now(), jalonId, name: file.name, url: URL.createObjectURL(file), date: "À l'instant" };
+    setSuivis(sv => sv.map(s => s.id !== sid ? s : { ...s, documents: [...(s.documents || []), doc] }));
+  };
+  const removeSuiviDoc = (sid, docId) => setSuivis(sv => sv.map(s => s.id !== sid ? s : { ...s, documents: s.documents.filter(d => d.id !== docId) }));
+  const viewPdf = soumissionId => { setPdfSoumissionId(soumissionId); go("bordereauPdf"); };
 
   /* --- Analyse IA réelle (API Anthropic) --- */
   const analyzeAI = async () => {
@@ -907,9 +919,11 @@ export default function App() {
   );
 
   /* ================= CHAT ================= */
-  const ChatScreen = () => (
+  const ChatScreen = () => {
+    const chatCh = chatChantierId && chantiers.find(c => c.id === chatChantierId);
+    return (
     <div style={{ padding: 16, display: "flex", flexDirection: "column", minHeight: "calc(100vh - 165px)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: chatCh ? 6 : 14 }}>
         <div style={{ width: 40, height: 40, borderRadius: 10, background: T.ink, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT, fontWeight: 900, fontSize: 15 }}>M</div>
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15 }}>{role === "client" ? "MV-3 PRO Sàrl" : "Client — SdB Savièse"}</div>
@@ -917,6 +931,11 @@ export default function App() {
         </div>
         <Phone size={18} color={T.sub} />
       </div>
+      {chatCh && (
+        <div style={{ ...S.sub, fontSize: 12, marginBottom: 12, display: "flex", alignItems: "center", gap: 5 }}>
+          <Briefcase size={12} /> À propos de : <b style={{ color: T.ink }}>{chatCh.titre}</b>
+        </div>
+      )}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
         {chatMsgs.map((m, i) => (
           <div key={i} style={{
@@ -942,7 +961,8 @@ export default function App() {
         </button>
       </div>
     </div>
-  );
+    );
+  };
 
   /* ================= PRO — CHANTIERS DISPONIBLES ================= */
   const ProHomeScreen = () => (
@@ -1015,6 +1035,9 @@ export default function App() {
         <div style={{ ...S.sub, fontSize: 12, margin: "10px 0", display: "flex", alignItems: "center", gap: 5 }}><Eye size={13} /> {nbSoum} soumission{nbSoum > 1 ? "s" : ""} reçue{nbSoum > 1 ? "s" : ""} sur ce chantier · max 4</div>
         <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
           <Btn kind="soft" style={{ fontSize: 13 }} onClick={() => go("proAgenda")}><Calendar size={16} /> Visite</Btn>
+          <Btn kind="soft" style={{ fontSize: 13 }} onClick={() => { setChatChantierId(ch.id); go("chat"); }}><MessageSquare size={16} /> Message</Btn>
+        </div>
+        <div style={{ marginTop: 8 }}>
           <Btn style={{ fontSize: 13 }} onClick={() => openBid(ch.id)}>Soumissionner <ChevronRight size={16} /></Btn>
         </div>
       </div>
@@ -1093,7 +1116,12 @@ export default function App() {
                   <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15 }}>{ch ? ch.titre : "Chantier"}</div>
                   <div style={S.sub}>{s.total.toLocaleString("fr-CH")} CHF · {s.date}</div>
                 </div>
-                <Tag color={c} bg={bg}>{s.statut === "Gagnée" ? "Gagnée ✓" : s.statut}</Tag>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                  <Tag color={c} bg={bg}>{s.statut === "Gagnée" ? "Gagnée ✓" : s.statut}</Tag>
+                  <button onClick={e => { e.stopPropagation(); viewPdf(s.id); }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 4, fontFamily: FONT, fontWeight: 700, fontSize: 11.5, color: T.sub }}>
+                    <FileText size={12} /> PDF
+                  </button>
+                </div>
               </div>
               {suivi && (
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
@@ -1604,7 +1632,12 @@ export default function App() {
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
                 <Tag color={s.statut === "Gagnée" ? T.green : s.statut === "Perdue" ? T.sub : T.amber} bg={s.statut === "Gagnée" ? T.greenBg : s.statut === "Perdue" ? T.soft : T.amberBg}>{s.statut}</Tag>
-                {s.statut === "En attente" && <Btn kind="green" style={{ width: "auto", fontSize: 12, padding: "9px 14px" }} onClick={() => adjuger(ch.id, s.id)}><Check size={14} strokeWidth={3} /> Adjuger</Btn>}
+                <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  <button onClick={() => viewPdf(s.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 4, fontFamily: FONT, fontWeight: 700, fontSize: 12, color: T.sub }}>
+                    <FileText size={13} /> PDF
+                  </button>
+                  {s.statut === "En attente" && <Btn kind="green" style={{ width: "auto", fontSize: 12, padding: "9px 14px" }} onClick={() => adjuger(ch.id, s.id)}><Check size={14} strokeWidth={3} /> Adjuger</Btn>}
+                </div>
               </div>
             </Card>
           ))}
@@ -1646,12 +1679,34 @@ export default function App() {
           </div>
         </Card>
 
+        {suivi.soumissionId && (
+          <button onClick={() => viewPdf(suivi.soumissionId)} style={{ width: "100%", background: T.white, border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 12px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontFamily: FONT, fontWeight: 700, fontSize: 13, color: T.red }}>
+            <FileText size={15} /> Voir le bordereau PDF de la soumission
+          </button>
+        )}
+
         <div style={{ ...S.label, margin: "16px 0 8px" }}>Jalons</div>
         <Card>
           {suivi.jalons.map((j, i) => (
-            <div key={j.id} onClick={() => toggleJalon(suivi.id, j.id)} style={{ display: "flex", gap: 10, alignItems: "center", padding: "10px 0", borderTop: i ? `1px solid ${T.line}` : "none", cursor: "pointer" }}>
-              {j.done ? <CheckCircle2 size={19} color={T.green} /> : <Clock size={19} color={T.sub} />}
-              <span style={{ ...S.body, fontWeight: 700, fontSize: 13.5, color: j.done ? T.ink : T.sub }}>{j.label}</span>
+            <div key={j.id} style={{ padding: "10px 0", borderTop: i ? `1px solid ${T.line}` : "none" }}>
+              <div onClick={() => toggleJalon(suivi.id, j.id)} style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer" }}>
+                {j.done ? <CheckCircle2 size={19} color={T.green} /> : <Clock size={19} color={T.sub} />}
+                <span style={{ ...S.body, fontWeight: 700, fontSize: 13.5, color: j.done ? T.ink : T.sub }}>{j.label}</span>
+              </div>
+              {j.id === "acompte" && (
+                <div style={{ marginLeft: 29, marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {(suivi.documents || []).filter(d => d.jalonId === "acompte").map(d => (
+                    <a key={d.id} href={d.url} download={d.name} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: FONT, fontSize: 12, fontWeight: 700, color: T.red, background: T.redBg, padding: "6px 10px", borderRadius: 8, textDecoration: "none" }}>
+                      <FileText size={13} /> {d.name}
+                      <span onClick={e => { e.preventDefault(); removeSuiviDoc(suivi.id, d.id); }} style={{ display: "flex", marginLeft: 2 }}><X size={12} /></span>
+                    </a>
+                  ))}
+                  <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: FONT, fontSize: 12, fontWeight: 700, color: T.sub, border: `1.5px dashed ${T.line}`, padding: "6px 10px", borderRadius: 8, cursor: "pointer" }}>
+                    <input type="file" accept="application/pdf" onChange={e => { addSuiviDoc(suivi.id, "acompte", e.target.files[0]); e.target.value = ""; }} style={{ display: "none" }} />
+                    <Plus size={12} /> Joindre le PDF de demande d'acompte
+                  </label>
+                </div>
+              )}
             </div>
           ))}
         </Card>
@@ -1681,6 +1736,119 @@ export default function App() {
             <Btn kind="green" onClick={() => finirChantier(suivi.id)}><CheckCircle2 size={18} /> Marquer le chantier terminé</Btn>
           </div>
         )}
+      </div>
+    );
+  };
+
+  /* ================= BORDEREAU — DOCUMENT PDF ================= */
+  const BordereauPdfScreen = () => {
+    const s = soumissions.find(x => x.id === pdfSoumissionId);
+    const ch = s && chantiers.find(c => c.id === s.chantierId);
+    const backTarget = role === "admin" ? "adminPilot" : "proSent";
+    if (!s || !ch) return (
+      <div className="no-print" style={{ padding: 16 }}>
+        <Back onClick={() => go(backTarget)} label="Retour" />
+        <div style={S.sub}>Document introuvable.</div>
+      </div>
+    );
+    const lignes = s.lignes && s.lignes.length ? s.lignes : [{ code: "—", d: "Prestation forfaitaire (détail non fourni)", u: "forfait", q: 1, pu: Math.round(s.total / 1.081) }];
+    const sousTotal = lignes.reduce((sum, l) => sum + l.q * l.pu, 0);
+    const tva = Math.round(sousTotal * 0.081);
+    const totalTTC = s.lignes ? Math.round(sousTotal * 1.081) : s.total;
+    const ref = "MV3-" + String(s.id).replace(/[^0-9]/g, "").slice(-6).padStart(6, "0");
+    const dateEmission = new Date().toLocaleDateString("fr-CH", { day: "2-digit", month: "long", year: "numeric" });
+    const note = NOTES_ENTREPRISES[s.entreprise];
+    const colWidths = ["10%", "40%", "10%", "12%", "13%", "15%"];
+    return (
+      <div>
+        <div className="no-print" style={{ position: "sticky", top: 0, zIndex: 10, background: T.bg, borderBottom: `1px solid ${T.line}`, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <Back onClick={() => go(backTarget)} label="Retour" />
+          <Btn style={{ width: "auto", padding: "10px 16px", fontSize: 13 }} onClick={() => window.print()}><FileText size={16} /> Enregistrer en PDF</Btn>
+        </div>
+        <div style={{ overflowX: "auto", padding: "24px 12px", background: "#9C9A91" }}>
+          <div className="pdf-doc" style={{ width: "210mm", minHeight: "297mm", margin: "0 auto", background: "#fff", padding: "16mm 14mm", boxSizing: "border-box", fontFamily: FONT, color: T.ink, boxShadow: "0 4px 24px rgba(0,0,0,.25)", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 14, borderBottom: `2px solid ${T.ink}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 26, height: 26, background: T.red, borderRadius: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, padding: 4 }}>
+                  {[0, 1, 2, 3].map(i => <div key={i} style={{ background: "#fff", borderRadius: 1 }} />)}
+                </div>
+                <div>
+                  <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 17, letterSpacing: "-0.02em" }}>MV3 CONNECT</div>
+                  <div style={{ fontFamily: FONT, fontSize: 10, color: T.sub }}>Marketplace de chantiers — Valais</div>
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13, letterSpacing: "0.06em", textTransform: "uppercase", color: T.red }}>Bordereau de soumission</div>
+                <div style={{ fontFamily: FONT, fontSize: 11, color: T.sub, marginTop: 3 }}>Réf. {ref} · {dateEmission}</div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, margin: "18px 0" }}>
+              <div>
+                <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: T.sub, marginBottom: 6 }}>Entreprise soumissionnaire</div>
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14 }}>{s.entreprise}</div>
+                {note && <div style={{ fontFamily: FONT, fontSize: 11.5, color: T.sub, marginTop: 2 }}>{note} ★ · entreprise vérifiée</div>}
+                <div style={{ fontFamily: FONT, fontSize: 11.5, color: T.sub, marginTop: 2 }}>Garantie {s.garantie}</div>
+              </div>
+              <div>
+                <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: T.sub, marginBottom: 6 }}>Chantier</div>
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14 }}>{ch.titre}</div>
+                <div style={{ fontFamily: FONT, fontSize: 11.5, color: T.sub, marginTop: 2 }}>{ch.ville} · {ch.categorie}</div>
+                <div style={{ fontFamily: FONT, fontSize: 11.5, color: T.sub, marginTop: 2 }}>Début {s.delaiDebut} · Durée {s.duree}</div>
+              </div>
+            </div>
+
+            <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", fontFamily: FONT, fontSize: 10 }}>
+              <colgroup>{colWidths.map((w, i) => <col key={i} style={{ width: w }} />)}</colgroup>
+              <thead>
+                <tr>
+                  {["Position", "Description", "Unité", "Quantité", "Prix unit.", "Total"].map((h, i) => (
+                    <th key={h} style={{ textAlign: i >= 2 ? "right" : "left", padding: "7px 6px", background: T.soft, fontWeight: 700, fontSize: 9, letterSpacing: "0.04em", textTransform: "uppercase", color: T.sub, borderBottom: `1.5px solid ${T.ink}` }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {lignes.map((l, i) => (
+                  <tr key={i}>
+                    <td style={{ padding: "7px 6px", borderBottom: `1px solid ${T.line}`, color: T.sub, fontSize: 9.5 }}>{l.code}</td>
+                    <td style={{ padding: "7px 6px", borderBottom: `1px solid ${T.line}`, overflowWrap: "break-word", fontWeight: 600 }}>{l.d}</td>
+                    <td style={{ padding: "7px 6px", borderBottom: `1px solid ${T.line}`, textAlign: "right", color: T.sub }}>{l.u}</td>
+                    <td style={{ padding: "7px 6px", borderBottom: `1px solid ${T.line}`, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{l.q}</td>
+                    <td style={{ padding: "7px 6px", borderBottom: `1px solid ${T.line}`, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{l.pu.toLocaleString("fr-CH")}</td>
+                    <td style={{ padding: "7px 6px", borderBottom: `1px solid ${T.line}`, textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{(l.q * l.pu).toLocaleString("fr-CH")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+              <div style={{ width: "55%" }}>
+                {[["Sous-total HT", sousTotal], ["TVA 8.1 %", tva]].map(([lbl, v]) => (
+                  <div key={lbl} style={{ display: "flex", justifyContent: "space-between", padding: "5px 6px", fontFamily: FONT, fontSize: 11 }}>
+                    <span style={{ color: T.sub }}>{lbl}</span>
+                    <span style={{ fontVariantNumeric: "tabular-nums" }}>{v.toLocaleString("fr-CH")} CHF</span>
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 6px", borderTop: `2px solid ${T.ink}`, marginTop: 4 }}>
+                  <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13 }}>Total TTC</span>
+                  <span style={{ fontFamily: FONT, fontWeight: 900, fontSize: 15, color: T.red, fontVariantNumeric: "tabular-nums" }}>{totalTTC.toLocaleString("fr-CH")} CHF</span>
+                </div>
+              </div>
+            </div>
+
+            {s.remarques && (
+              <div style={{ marginTop: 18 }}>
+                <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: T.sub, marginBottom: 4 }}>Remarques</div>
+                <div style={{ fontFamily: FONT, fontSize: 11, lineHeight: 1.5 }}>{s.remarques}</div>
+              </div>
+            )}
+
+            <div style={{ marginTop: "auto", paddingTop: 10, borderTop: `1px solid ${T.line}`, display: "flex", justifyContent: "space-between", fontFamily: FONT, fontSize: 9, color: T.sub }}>
+              <span>MV3 Connect — document généré automatiquement, valable 30 jours</span>
+              <span>Réf. {ref}</span>
+            </div>
+          </div>
+        </div>
       </div>
     );
   };
@@ -1966,7 +2134,7 @@ export default function App() {
     adminHome: AdminHomeScreen, adminQueue: AdminQueueScreen, adminRequest: AdminRequestScreen,
     adminPublish: AdminPublishScreen, chantierPublished: ChantierPublishedScreen,
     adminPilot: AdminPilotScreen, adminChantierCompare: AdminChantierCompareScreen,
-    suivi: SuiviScreen,
+    suivi: SuiviScreen, bordereauPdf: BordereauPdfScreen,
     profile: ProfileScreen,
   };
 
