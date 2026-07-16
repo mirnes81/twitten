@@ -5,7 +5,7 @@ import {
   Sparkles, AlertTriangle, Home, Briefcase, MessageSquare, User,
   CheckCircle2, Clock, Star, Shield, Send, Plus, Minus, X, Check,
   Calendar, TrendingUp, Eye, Image, PenLine, Building2, LayoutDashboard,
-  Users, BarChart3, Video, Phone, AlertCircle, FileSignature, Trash2, Bell,
+  BarChart3, Video, Phone, AlertCircle, FileSignature, Bell,
   Loader2, CreditCard, QrCode
 } from "lucide-react";
 
@@ -85,16 +85,6 @@ const CATS = [
   { n: "Rénovation", I: Hammer, live: true }, { n: "Peinture", I: Paintbrush, live: false },
   { n: "Électricité", I: Zap, live: false }, { n: "Chauffage", I: Flame, live: false },
 ];
-const OFFERS = [
-  { id: "A", ent: "Carrelage Dubuis Sàrl", lieu: "Sion", note: 4.8, ch: 127, prix: 18450, fourn: "Incluses", debut: "12 août", duree: "8 j", gar: "5 ans", rep: "≈ 2 h" },
-  { id: "B", ent: "Batisol Valais SA", lieu: "Conthey", note: 4.6, ch: 89, prix: 17900, fourn: "Partielles", debut: "25 août", duree: "7 j", gar: "2 ans", rep: "≈ 5 h" },
-  { id: "C", ent: "MV-3 PRO Sàrl", lieu: "Sion", note: 4.9, ch: 214, prix: 20200, fourn: "Incluses", debut: "5 août", duree: "10 j", gar: "5 ans", rep: "≈ 1 h" },
-];
-const VARIANTES = {
-  Essentiel: { prix: "17'400", desc: "Pose uniquement, fournitures par le client", gar: "2 ans", lignes: [["Dépose et évacuation", "735"], ["Étanchéité douche", "810"], ["Pose sol 60×60", "1'120"], ["Pose murale 30×60", "2'900"], ["Douche italienne (pose)", "1'850"], ["Joints et silicone", "485"]] },
-  Recommandé: { prix: "20'200", desc: "Fourniture et pose, carrelage Savoia standard", gar: "5 ans", lignes: [["Dépose et évacuation", "735"], ["Étanchéité complète", "980"], ["Fourniture Savoia 60×60", "1'890"], ["Fourniture murale 30×60", "2'095"], ["Pose sol + murs", "4'020"], ["Douche italienne complète", "2'450"]] },
-  Premium: { prix: "23'900", desc: "Fournitures premium, protection, nettoyage final, garantie étendue", gar: "10 ans", lignes: [["Dépose et évacuation", "735"], ["Étanchéité + natte", "1'240"], ["Fourniture grès premium 120×60", "3'480"], ["Pose grand format", "4'890"], ["Douche italienne + niche LED", "3'180"], ["Protection + nettoyage final", "690"]] },
-};
 /* ---------------- Catalogues de soumission (bordereaux par métier) ---------------- */
 // Grilles de positions inspirées des catalogues CAN/CRB utilisés en Suisse romande :
 // chaque position a une unité fixe (m², ml, pce, forfait) et une quantité calculée depuis
@@ -233,9 +223,26 @@ const emptyChForm = () => ({
   demandeur: "",
 });
 const NOTES_ENTREPRISES = { "MV-3 PRO Sàrl": 4.9, "Carrelage Dubuis Sàrl": 4.8, "Batisol Valais SA": 4.6, "Ceramica Rhône Sàrl": 4.4 };
+const PROMO_ORG = "Architecture Rhône SA";
+const S7_LIGNES = [
+  { code: "111.1", d: "Installation de chantier et protections", u: "forfait", q: 1, pu: 280 },
+  { code: "221.2", d: "Dépose de l'ancien revêtement", u: "m²", q: 7, pu: 105 },
+  { code: "221.4", d: "Évacuation et mise en décharge des gravats", u: "forfait", q: 1, pu: 180 },
+  { code: "228.1", d: "Préparation du support / ragréage", u: "m²", q: 7, pu: 40 },
+  { code: "271.3", d: "Étanchéité (SEP) sol", u: "m²", q: 7, pu: 80 },
+  { code: "271.5", d: "Étanchéité relevés muraux et angles", u: "ml", q: 9, pu: 47 },
+  { code: "241.1", d: "Fourniture et pose carrelage sol", u: "m²", q: 7, pu: 270 },
+  { code: "241.3", d: "Fourniture et pose carrelage mural", u: "m²", q: 20, pu: 210 },
+  { code: "241.6", d: "Pose plinthes", u: "ml", q: 5, pu: 97 },
+  { code: "241.8", d: "Seuils et profilés de finition", u: "ml", q: 2, pu: 150 },
+  { code: "241.9", d: "Joints de dilatation périphériques", u: "ml", q: 6, pu: 80 },
+  { code: "251.4", d: "Douche italienne complète (receveur à carreler)", u: "pce", q: 1, pu: 2450 },
+  { code: "299.0", d: "Nettoyage fin de chantier", u: "forfait", q: 1, pu: 300 },
+];
 const SOUMISSIONS_SEED = [
   { id: "s1", chantierId: 1, entreprise: "Carrelage Dubuis Sàrl", total: 18450, delaiDebut: "12 août", duree: "8 j", garantie: "5 ans", statut: "En attente", date: "Il y a 2 j" },
   { id: "s2", chantierId: 1, entreprise: "Batisol Valais SA", total: 17900, delaiDebut: "25 août", duree: "7 j", garantie: "2 ans", statut: "En attente", date: "Il y a 1 j" },
+  { id: "s7", chantierId: 1, entreprise: "MV-3 PRO Sàrl", lignes: S7_LIGNES, total: Math.round(S7_LIGNES.reduce((s, l) => s + l.q * l.pu, 0) * 1.081), delaiDebut: "5 août", duree: "10 j", garantie: "5 ans", statut: "En attente", date: "Il y a 6 h" },
   { id: "s3", chantierId: 4, entreprise: "Carrelage Dubuis Sàrl", total: 178200, delaiDebut: "sept.", duree: "35 j", garantie: "5 ans", statut: "En attente", date: "Il y a 3 j" },
   { id: "s4", chantierId: 4, entreprise: "Batisol Valais SA", total: 172550, delaiDebut: "sept.", duree: "32 j", garantie: "2 ans", statut: "En attente", date: "Il y a 4 j" },
   { id: "s5", chantierId: 4, entreprise: "Ceramica Rhône Sàrl", total: 181900, delaiDebut: "sept.", duree: "34 j", garantie: "2 ans", statut: "Perdue", date: "Il y a 5 j" },
@@ -258,13 +265,6 @@ const COMMISSION_RATES = { Starter: 0.10, Pro: 0.07, Premium: 0.04 };
 const FACTURES_SEED = [
   { id: "f-s6", soumissionId: "s6", chantierId: 2, entreprise: "MV-3 PRO Sàrl", montant: 6120, taux: 0.04, commission: 245, statut: "Payée", date: "La semaine dernière" },
 ];
-const LOTS = [
-  { n: "Lot 01 — Démolition", st: "Adjugé", c: T.sub, bg: T.soft, info: "Démo Valais SA · 84'500 CHF" },
-  { n: "Lot 02 — Chape", st: "3 offres", c: T.amber, bg: T.amberBg, info: "Délai : 25 juillet" },
-  { n: "Lot 03 — Carrelage", st: "Comparer", c: T.red, bg: T.redBg, info: "3 soumissions reçues", go: true },
-  { n: "Lot 04 — Parquet", st: "Invitations", c: T.amber, bg: T.amberBg, info: "4 entreprises invitées" },
-  { n: "Lot 05 — Sanitaire", st: "Brouillon", c: T.sub, bg: T.soft, info: "Documents en préparation" },
-];
 const ADMIN_QUEUE = [
   { t: "Salle de bains — Savièse", s: "Il y a 12 min · Particulier · Dossier complet", q: "A", go: true },
   { t: "Peinture façade — Martigny", s: "Il y a 1 h · Catégorie à corriger", q: "B" },
@@ -281,10 +281,6 @@ export default function App() {
     sdb: true, depose: true, chauff: false, budget: "10 000 – 25 000 CHF", delai: "Dans le mois",
     visite: "Visite sur place", creneau: "Mardi 14h–17h",
   });
-  const [variant, setVariant] = useState("Recommandé");
-  const [accepted, setAccepted] = useState(false);
-  const [signed, setSigned] = useState(false);
-  const [received, setReceived] = useState(false);
   const [review, setReview] = useState({ q: 5, prix: 5, delai: 4, com: 5, prop: 5, sav: 5, done: false });
   const [chantiers, setChantiers] = useState(CHANTIERS_INIT);
   const [soumissions, setSoumissions] = useState(SOUMISSIONS_SEED);
@@ -296,6 +292,8 @@ export default function App() {
   const [pdfSoumissionId, setPdfSoumissionId] = useState(null);
   const [factures, setFactures] = useState(FACTURES_SEED);
   const [pdfFactureId, setPdfFactureId] = useState(null);
+  const [monChantierId, setMonChantierId] = useState(1);
+  const [selectedSoumissionId, setSelectedSoumissionId] = useState("s7");
   const [chatChantierId, setChatChantierId] = useState(null);
   const [chStep, setChStep] = useState(0);
   const [chForm, setChForm] = useState(emptyChForm());
@@ -352,6 +350,26 @@ export default function App() {
     setChStep(0);
     setChForm(emptyChForm());
     go("chantierPublished");
+  };
+  const publishClientDemande = () => {
+    const id = Math.max(0, ...chantiers.map(c => c.id)) + 1;
+    const nouveau = {
+      id, titre: `${form.type} — ${form.bien}`, categorie: "Carrelage", ville: form.npa, adresse: "",
+      typeBien: form.bien, etage: "", numAppart: "", dist: null,
+      desc: [form.type, form.sdb && "Douche italienne à créer", form.depose && "Dépose de l'ancien revêtement", form.chauff && "Chauffage au sol"].filter(Boolean).join(" · "),
+      metres: { surfSol: form.surfSol, surfMur: form.surfMur, mlEtanch: 0, mlPlinthes: 0, mlSeuils: 0, mlJoints: 0, nbDouches: form.sdb ? 1 : 0 },
+      budget: form.budget, delai: form.delai, limite: "", statut: "Ouvert", prive: false, invites: [], photos: [], demandeur: "",
+      neuf: true, match: 90, tags: [form.type],
+    };
+    setChantiers(cs => [nouveau, ...cs]);
+    setMonChantierId(id);
+    notify("pro", "Nouvelle demande particulier", `${nouveau.titre} — ${form.npa}`, T.red);
+    go("published");
+  };
+  const startPromoProject = () => {
+    setChForm({ ...emptyChForm(), demandeur: PROMO_ORG });
+    setChStep(0);
+    go("adminPublish");
   };
   const openBid = chantierId => {
     const ch = chantiers.find(c => c.id === chantierId);
@@ -544,7 +562,7 @@ export default function App() {
   /* ================= CLIENT — FORM (9 étapes) ================= */
   const FORM_STEPS = ["Type de demande", "Type de bien", "Localisation", "Description des travaux", "Photos et documents", "Budget et délai", "Visite souhaitée", "Coordonnées", "Vérification"];
   const FormScreen = () => {
-    const next = () => step < 8 ? setStep(step + 1) : go("published");
+    const next = () => step < 8 ? setStep(step + 1) : publishClientDemande();
     const back = () => step > 0 ? setStep(step - 1) : go("home");
     return (
       <div style={{ padding: 16 }}>
@@ -699,34 +717,43 @@ export default function App() {
   );
 
   /* ================= CLIENT — DASHBOARD ================= */
-  const RequestsScreen = () => (
+  const RequestsScreen = () => {
+    const ch = chantiers.find(c => c.id === monChantierId);
+    const mine = ch ? soumissions.filter(s => s.chantierId === ch.id) : [];
+    const suivi = ch ? suivis.find(sv => sv.chantierId === ch.id) : null;
+    return (
     <div style={{ padding: 16 }}>
       <h1 style={{ ...S.h1, margin: "10px 0 16px" }}>Mes chantiers</h1>
-      <div style={S.label}>Demandes actives</div>
-      <Card onClick={() => go("request")} style={{ marginTop: 8 }}>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15 }}>Salle de bains — Savièse</div>
-            <div style={{ ...S.sub, marginTop: 2 }}>Carrelage · Sol 7 m² + murs 20 m²</div>
-          </div>
-          <Tag color={T.green} bg={T.greenBg}>3 offres</Tag>
-        </div>
-        <div style={{ display: "flex", gap: 14, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>
-          {[["3", "offres"], ["5", "intéressés"], ["2", "messages"], ["1", "visite"]].map(([n, l]) => (
-            <div key={l}><span style={{ fontFamily: FONT, fontWeight: 900, fontSize: 16, color: T.red }}>{n}</span><span style={{ ...S.sub, fontSize: 11.5, marginLeft: 4 }}>{l}</span></div>
-          ))}
-        </div>
-      </Card>
-      {signed && <>
-        <div style={{ ...S.label, marginTop: 18 }}>Travaux en cours</div>
-        <Card onClick={() => go("works")} style={{ marginTop: 8, borderLeft: `4px solid ${T.green}` }}>
+      {!ch && (
+        <Card style={{ textAlign: "center", padding: 24 }}>
+          <div style={{ ...S.body, marginBottom: 12 }}>Vous n'avez pas encore publié de demande.</div>
+          <Btn onClick={() => { setStep(0); go("home"); }}>Publier une demande <ChevronRight size={17} /></Btn>
+        </Card>
+      )}
+      {ch && !suivi && <>
+        <div style={S.label}>Demandes actives</div>
+        <Card onClick={() => go("request")} style={{ marginTop: 8 }}>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15 }}>MV-3 PRO Sàrl</div>
-            <Tag color={T.green} bg={T.greenBg}>{received ? "Réceptionné" : "Signé"}</Tag>
+            <div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15 }}>{ch.titre}</div>
+              <div style={{ ...S.sub, marginTop: 2 }}>{ch.categorie} · Sol {ch.metres.surfSol} m² + murs {ch.metres.surfMur} m²</div>
+            </div>
+            <Tag color={T.green} bg={T.greenBg}>{mine.length} offre{mine.length > 1 ? "s" : ""}</Tag>
           </div>
-          <div style={{ ...S.sub, marginTop: 2 }}>Début 5 août · {VARIANTES[variant].prix} CHF · Acompte 30 % payé</div>
         </Card>
       </>}
+      {ch && suivi && (
+        <>
+          <div style={S.label}>Travaux en cours</div>
+          <Card onClick={() => { setSuiviId(suivi.id); go("suivi"); }} style={{ marginTop: 8, borderLeft: `4px solid ${T.green}` }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15 }}>{suivi.entreprise}</div>
+              <Tag color={T.green} bg={T.greenBg}>{suivi.statut}</Tag>
+            </div>
+            <div style={{ ...S.sub, marginTop: 2 }}>{ch.titre} · {suivi.jalons.filter(j => j.done).length} / {suivi.jalons.length} jalons</div>
+          </Card>
+        </>
+      )}
       <div style={{ ...S.label, marginTop: 18 }}>Terminés</div>
       <Card style={{ marginTop: 8, opacity: 0.75 }}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -738,111 +765,127 @@ export default function App() {
         </div>
       </Card>
     </div>
-  );
+    );
+  };
 
   /* ================= CLIENT — COMPARATOR ================= */
-  const RequestScreen = () => (
-    <div style={{ padding: 16 }}>
-      <Back onClick={() => go("requests")} label="Mes chantiers" />
-      <h1 style={{ ...S.h1, fontSize: 22 }}>Comparer les offres</h1>
-      <p style={{ ...S.sub, margin: "6px 0 14px" }}>3 offres normalisées pour votre salle de bains, toutes vérifiées.</p>
-      <div style={{ overflowX: "auto", margin: "0 -16px", padding: "0 16px" }}>
-        <table style={{ borderCollapse: "separate", borderSpacing: 0, width: "100%", minWidth: 430, fontFamily: FONT, fontSize: 12.5 }}>
-          <thead><tr>
-            <th></th>
-            {OFFERS.map(o => (
-              <th key={o.id} style={{ padding: "8px 6px", background: o.id === "C" ? T.redBg : "transparent", borderRadius: "10px 10px 0 0" }}>
-                <div style={{ fontWeight: 800, fontSize: 12, lineHeight: 1.2 }}>{o.ent.split(" ")[0]}<br />{o.ent.split(" ").slice(1).join(" ")}</div>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, marginTop: 3 }}>
-                  <Star size={11} color={T.amber} fill={T.amber} /><span style={{ fontWeight: 800 }}>{o.note}</span>
+  const RequestScreen = () => {
+    const ch = chantiers.find(c => c.id === monChantierId);
+    const offres = ch ? soumissions.filter(s => s.chantierId === ch.id) : [];
+    const meilleureNote = offres.length ? Math.max(...offres.map(o => NOTES_ENTREPRISES[o.entreprise] || 0)) : 0;
+    return (
+      <div style={{ padding: 16 }}>
+        <Back onClick={() => go("requests")} label="Mes chantiers" />
+        <h1 style={{ ...S.h1, fontSize: 22 }}>Comparer les offres</h1>
+        <p style={{ ...S.sub, margin: "6px 0 14px" }}>{offres.length} offre{offres.length > 1 ? "s" : ""} normalisée{offres.length > 1 ? "s" : ""} pour votre chantier, toutes vérifiées.</p>
+        {offres.length === 0 && <Card><div style={S.sub}>Aucune offre reçue pour l'instant. Vous serez notifié dès la première soumission.</div></Card>}
+        {offres.length > 0 && <>
+          <div style={{ overflowX: "auto", margin: "0 -16px", padding: "0 16px" }}>
+            <table style={{ borderCollapse: "separate", borderSpacing: 0, width: "100%", minWidth: 430, fontFamily: FONT, fontSize: 12.5 }}>
+              <thead><tr>
+                <th></th>
+                {offres.map(o => {
+                  const note = NOTES_ENTREPRISES[o.entreprise] || 0;
+                  const best = note === meilleureNote;
+                  return (
+                    <th key={o.id} style={{ padding: "8px 6px", background: best ? T.redBg : "transparent", borderRadius: "10px 10px 0 0" }}>
+                      <div style={{ fontWeight: 800, fontSize: 12, lineHeight: 1.2 }}>{o.entreprise.split(" ")[0]}<br />{o.entreprise.split(" ").slice(1).join(" ")}</div>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 3, marginTop: 3 }}>
+                        <Star size={11} color={T.amber} fill={T.amber} /><span style={{ fontWeight: 800 }}>{note}</span>
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr></thead>
+              <tbody>
+                {[["Prix total", o => <b style={{ fontSize: 13.5 }}>{o.total.toLocaleString("fr-CH")}</b>], ["Début", o => o.delaiDebut], ["Durée", o => o.duree], ["Garantie", o => o.garantie], ["Vérifiée", () => <Check size={15} color={T.green} strokeWidth={3} />]].map(([lbl, fn]) => (
+                  <tr key={lbl}>
+                    <td style={{ padding: "9px 6px", color: T.sub, fontWeight: 700, borderTop: `1px solid ${T.line}` }}>{lbl}</td>
+                    {offres.map(o => <td key={o.id} style={{ padding: "9px 6px", textAlign: "center", borderTop: `1px solid ${T.line}`, background: (NOTES_ENTREPRISES[o.entreprise] || 0) === meilleureNote ? T.redBg : "transparent" }}>{fn(o)}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
+            {offres.map(o => (
+              <Card key={o.id} style={(NOTES_ENTREPRISES[o.entreprise] || 0) === meilleureNote ? { border: `2px solid ${T.red}` } : {}}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <div>
+                    <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15 }}>{o.entreprise}</div>
+                    <div style={S.sub}>{NOTES_ENTREPRISES[o.entreprise] || "—"} ★ · entreprise vérifiée</div>
+                  </div>
+                  <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 16 }}>{o.total.toLocaleString("fr-CH")}<span style={{ fontSize: 11, color: T.sub }}> CHF</span></div>
                 </div>
-              </th>
+                <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                  <Btn kind="soft" style={{ fontSize: 13, padding: "10px" }} onClick={() => { setChatChantierId(ch.id); go("chat"); }}><MessageSquare size={15} /> Question</Btn>
+                  <Btn style={{ fontSize: 13, padding: "10px" }} onClick={() => { setSelectedSoumissionId(o.id); go("offerDetail"); }}>Voir le devis <ChevronRight size={15} /></Btn>
+                </div>
+              </Card>
             ))}
-          </tr></thead>
-          <tbody>
-            {[["Prix total", o => <b style={{ fontSize: 13.5 }}>{o.prix.toLocaleString("fr-CH")}</b>], ["Fournitures", o => o.fourn], ["Début", o => o.debut], ["Durée", o => o.duree], ["Garantie", o => o.gar], ["Réponse", o => o.rep], ["Vérifiée", () => <Check size={15} color={T.green} strokeWidth={3} />]].map(([lbl, fn]) => (
-              <tr key={lbl}>
-                <td style={{ padding: "9px 6px", color: T.sub, fontWeight: 700, borderTop: `1px solid ${T.line}` }}>{lbl}</td>
-                {OFFERS.map(o => <td key={o.id} style={{ padding: "9px 6px", textAlign: "center", borderTop: `1px solid ${T.line}`, background: o.id === "C" ? T.redBg : "transparent" }}>{fn(o)}</td>)}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          </div>
+        </>}
       </div>
-      <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
-        {OFFERS.map(o => (
-          <Card key={o.id} style={o.id === "C" ? { border: `2px solid ${T.red}` } : {}}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <div>
-                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15 }}>{o.ent}</div>
-                <div style={S.sub}>{o.lieu} · {o.ch} chantiers vérifiés</div>
-              </div>
-              <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 16 }}>{o.prix.toLocaleString("fr-CH")}<span style={{ fontSize: 11, color: T.sub }}> CHF</span></div>
-            </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-              <Btn kind="soft" style={{ fontSize: 13, padding: "10px" }} onClick={() => go("chat")}><MessageSquare size={15} /> Question</Btn>
-              <Btn style={{ fontSize: 13, padding: "10px" }} onClick={() => go(o.id === "C" ? "offerDetail" : "offerDetail")}>Voir le devis <ChevronRight size={15} /></Btn>
-            </div>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
+    );
+  };
 
-  /* ================= CLIENT — OFFER DETAIL + VARIANTES ================= */
+  /* ================= CLIENT — OFFER DETAIL ================= */
   const OfferDetailScreen = () => {
-    const v = VARIANTES[variant];
+    const s = soumissions.find(x => x.id === selectedSoumissionId);
+    if (!s) return (
+      <div style={{ padding: 16 }}>
+        <Back onClick={() => go("request")} label="Comparer les offres" />
+        <div style={S.sub}>Devis introuvable.</div>
+      </div>
+    );
+    const note = NOTES_ENTREPRISES[s.entreprise];
+    const lignes = s.lignes && s.lignes.length ? s.lignes : [{ code: "—", d: "Prestation forfaitaire", u: "forfait", q: 1, pu: Math.round(s.total / 1.081) }];
     return (
       <div style={{ padding: 16 }}>
         <Back onClick={() => go("request")} label="Comparer les offres" />
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          <h1 style={{ ...S.h1, fontSize: 21 }}>Devis MV-3 PRO Sàrl</h1>
+          <h1 style={{ ...S.h1, fontSize: 21 }}>Devis {s.entreprise}</h1>
           <Tag color={T.green} bg={T.greenBg}>Vérifié ✓</Tag>
         </div>
-        <p style={{ ...S.sub, margin: "4px 0 14px" }}>Sion · 4.9 ★ · 214 chantiers · Réponse ≈ 1 h</p>
-        <div style={{ display: "flex", background: T.soft, borderRadius: 11, padding: 4, marginBottom: 12 }}>
-          {Object.keys(VARIANTES).map(k => (
-            <button key={k} onClick={() => setVariant(k)} style={{
-              flex: 1, fontFamily: FONT, fontWeight: 700, fontSize: 12.5, padding: "9px 4px",
-              borderRadius: 8, border: "none", cursor: "pointer",
-              background: variant === k ? T.white : "transparent",
-              color: variant === k ? T.red : T.sub,
-              boxShadow: variant === k ? "0 1px 3px rgba(0,0,0,.08)" : "none"
-            }}>{k}</button>
-          ))}
-        </div>
+        <p style={{ ...S.sub, margin: "4px 0 14px" }}>{note ? `${note} ★ · ` : ""}Début {s.delaiDebut} · Durée {s.duree} · Garantie {s.garantie}</p>
         <Card>
-          <div style={{ ...S.sub, marginBottom: 10 }}>{v.desc}</div>
-          {v.lignes.map(([d, p], i) => (
+          {lignes.map((l, i) => (
             <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderTop: i ? `1px solid ${T.line}` : "none", fontFamily: FONT, fontSize: 13.5 }}>
-              <span style={{ fontWeight: 600 }}>{d}</span><span style={{ fontWeight: 800 }}>{p} CHF</span>
+              <span style={{ fontWeight: 600 }}>{l.d}</span><span style={{ fontWeight: 800 }}>{(l.q * l.pu).toLocaleString("fr-CH")} CHF</span>
             </div>
           ))}
           <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 0 2px", borderTop: `2px solid ${T.ink}`, marginTop: 4 }}>
             <div>
               <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 15 }}>Total TTC (TVA 8.1 %)</div>
-              <div style={{ ...S.sub, fontSize: 12 }}>Garantie {v.gar} · Début 5 août · 10 jours</div>
+              <div style={{ ...S.sub, fontSize: 12 }}>Garantie {s.garantie} · Début {s.delaiDebut} · {s.duree}</div>
             </div>
-            <span style={{ fontFamily: FONT, fontWeight: 900, fontSize: 19, color: T.red }}>{v.prix} CHF</span>
+            <span style={{ fontFamily: FONT, fontWeight: 900, fontSize: 19, color: T.red }}>{s.total.toLocaleString("fr-CH")} CHF</span>
           </div>
         </Card>
+        {s.remarques && (
+          <Card style={{ marginTop: 10, background: T.soft, border: "none" }}>
+            <div style={{ ...S.sub, fontWeight: 600 }}>{s.remarques}</div>
+          </Card>
+        )}
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-          <Btn kind="soft" style={{ fontSize: 13 }}><FileText size={16} /> PDF</Btn>
-          <Btn kind="soft" style={{ fontSize: 13 }} onClick={() => go("chat")}><MessageSquare size={16} /> Modifier</Btn>
+          <Btn kind="soft" style={{ fontSize: 13 }} onClick={() => viewPdf(s.id)}><FileText size={16} /> PDF</Btn>
+          <Btn kind="soft" style={{ fontSize: 13 }} onClick={() => { const ch = chantiers.find(c => c.id === s.chantierId); if (ch) setChatChantierId(ch.id); go("chat"); }}><MessageSquare size={16} /> Modifier</Btn>
         </div>
         <div style={{ marginTop: 8 }}>
-          <Btn onClick={() => go("sign")}><FileSignature size={17} /> Accepter et signer — {v.prix} CHF</Btn>
+          <Btn onClick={() => go("sign")}><FileSignature size={17} /> Accepter et signer — {s.total.toLocaleString("fr-CH")} CHF</Btn>
         </div>
       </div>
     );
   };
 
   /* ================= CLIENT — E-SIGNATURE ================= */
-  const SignScreen = () => (
+  const SignScreen = () => {
+    const s = soumissions.find(x => x.id === selectedSoumissionId);
+    return (
     <div style={{ padding: 16 }}>
       <Back onClick={() => go("offerDetail")} label="Devis" />
       <h1 style={{ ...S.h1, fontSize: 22 }}>Signature électronique</h1>
-      <p style={{ ...S.sub, margin: "6px 0 16px" }}>Contrat : offre <b>{variant}</b> de MV-3 PRO Sàrl · {VARIANTES[variant].prix} CHF TTC · Garantie {VARIANTES[variant].gar}</p>
+      <p style={{ ...S.sub, margin: "6px 0 16px" }}>Contrat : offre de <b>{s ? s.entreprise : "—"}</b> · {s ? s.total.toLocaleString("fr-CH") : "—"} CHF TTC · Garantie {s ? s.garantie : "—"}</p>
       <Card>
         {["Devis détaillé et conditions générales", "Échéancier : 30 / 30 / 30 / 10 %", "Assurance RC de l'entreprise vérifiée", "Droit de rétractation 14 jours"].map((t, i) => (
           <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 0", borderTop: i ? `1px solid ${T.line}` : "none" }}>
@@ -864,66 +907,17 @@ export default function App() {
       </div>
       <div style={{ ...S.sub, fontSize: 11.5, textAlign: "center", marginTop: 10 }}>Horodatage sécurisé · Copie PDF envoyée par e-mail</div>
     </div>
-  );
-
-  /* ================= CLIENT — WORKS ================= */
-  const WorksScreen = () => (
-    <div style={{ padding: 16 }}>
-      <Back onClick={() => go("requests")} label="Mes chantiers" />
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1 style={{ ...S.h1, fontSize: 22 }}>Salle de bains</h1>
-        <Tag color={T.green} bg={T.greenBg}>{received ? "Réceptionné ✓" : "En cours"}</Tag>
-      </div>
-      <p style={{ ...S.sub, margin: "4px 0 16px" }}>MV-3 PRO Sàrl · Offre {variant} signée · {VARIANTES[variant].prix} CHF</p>
-      <div style={S.label}>Échéancier de paiement</div>
-      <Card style={{ marginTop: 8 }}>
-        {[["Acompte 30 %", "Payé par TWINT ✓", true], ["Début des travaux 30 %", "QR-facture le 5 août", false], ["En cours 30 %", "—", false], ["Réception 10 %", "Après validation", received]].map(([t, s, done], i) => (
-          <div key={i} style={{ display: "flex", gap: 10, alignItems: "center", padding: "9px 0", borderTop: i ? `1px solid ${T.line}` : "none" }}>
-            {done ? <CheckCircle2 size={18} color={T.green} /> : <Clock size={18} color={T.sub} />}
-            <div><div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13.5 }}>{t}</div><div style={{ ...S.sub, fontSize: 12 }}>{s}</div></div>
-          </div>
-        ))}
-      </Card>
-      <div style={{ ...S.label, marginTop: 16 }}>Photos du chantier</div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginTop: 8 }}>
-        {["Avant", "Pendant", "Après"].map(p => (
-          <div key={p} style={{ background: T.soft, borderRadius: 10, height: 88, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 5 }}>
-            <Camera size={18} color={T.sub} /><span style={{ ...S.sub, fontSize: 11, fontWeight: 700 }}>{p}</span>
-          </div>
-        ))}
-      </div>
-      <div style={{ ...S.label, marginTop: 16 }}>Journal de chantier</div>
-      <Card style={{ marginTop: 8 }}>
-        {[["18 juil.", "Contrat signé · QR-facture d'acompte envoyée"], ["22 juil.", "Commande carrelage Savoia confirmée"], ["5 août", "Début — dépose et préparation du support"], ["8 août", "Étanchéité posée · photo ajoutée"]].map(([d, t], i) => (
-          <div key={i} style={{ display: "flex", gap: 12, padding: "8px 0", borderTop: i ? `1px solid ${T.line}` : "none" }}>
-            <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 12, color: T.red, minWidth: 52 }}>{d}</span>
-            <span style={{ ...S.body, fontSize: 13 }}>{t}</span>
-          </div>
-        ))}
-      </Card>
-      <Card style={{ marginTop: 12, background: T.amberBg, border: "none" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: T.amber }}>Avenant proposé</div>
-            <div style={{ ...S.sub, fontSize: 13 }}>Niche murale LED · + 380 CHF · + 0.5 jour</div>
-          </div>
-          <Btn kind="dark" style={{ width: "auto", fontSize: 12, padding: "9px 14px" }}>Signer</Btn>
-        </div>
-      </Card>
-      {!received && <div style={{ marginTop: 14 }}>
-        <Btn kind="green" onClick={() => { setReceived(true); go("review"); }}><CheckCircle2 size={18} /> Réception des travaux</Btn>
-      </div>}
-      {received && <div style={{ marginTop: 14 }}>
-        <Btn kind="soft" onClick={() => go("review")}><Star size={17} /> {review.done ? "Voir mon évaluation" : "Évaluer l'entreprise"}</Btn>
-      </div>}
-    </div>
-  );
+    );
+  };
 
   /* ================= CLIENT — REVIEW ================= */
-  const ReviewScreen = () => (
+  const ReviewScreen = () => {
+    const ch = chantiers.find(c => c.id === monChantierId);
+    const suivi = ch && suivis.find(sv => sv.chantierId === ch.id);
+    return (
     <div style={{ padding: 16 }}>
-      <Back onClick={() => go("works")} label="Chantier" />
-      <h1 style={{ ...S.h1, fontSize: 22 }}>Évaluer MV-3 PRO Sàrl</h1>
+      <Back onClick={() => go("suivi")} label="Chantier" />
+      <h1 style={{ ...S.h1, fontSize: 22 }}>Évaluer {suivi ? suivi.entreprise : "l'entreprise"}</h1>
       <p style={{ ...S.sub, margin: "6px 0 16px" }}>Votre avis est lié à un chantier vérifié et signé — il compte vraiment.</p>
       {[["q", "Qualité du travail"], ["prix", "Respect du prix"], ["delai", "Respect des délais"], ["com", "Communication"], ["prop", "Propreté"], ["sav", "Service après-vente"]].map(([k, lbl]) => (
         <Card key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, padding: "12px 14px" }}>
@@ -936,7 +930,8 @@ export default function App() {
         {review.done ? "✓ Avis publié — merci !" : "Publier mon avis"}
       </Btn>
     </div>
-  );
+    );
+  };
 
   /* ================= CHAT ================= */
   const ChatScreen = () => {
@@ -1261,118 +1256,62 @@ export default function App() {
   };
 
   /* ================= PROMOTEUR ================= */
-  const PromoHomeScreen = () => (
+  const PromoHomeScreen = () => {
+    const mesChantiers = chantiers.filter(c => c.demandeur === PROMO_ORG);
+    const actifs = mesChantiers.filter(c => c.statut !== "Terminé");
+    const termines = mesChantiers.filter(c => c.statut === "Terminé");
+    const totalSoum = mesChantiers.reduce((s, c) => s + soumissions.filter(x => x.chantierId === c.id).length, 0);
+    return (
     <div style={{ padding: 16 }}>
       <h1 style={{ ...S.h1, margin: "10px 0 4px" }}>Mes projets</h1>
-      <p style={{ ...S.sub, margin: "0 0 14px" }}>Appels d'offres privés — vous choisissez les entreprises invitées, lot par lot.</p>
-      <Card onClick={() => go("promoProject")} style={{ borderLeft: `4px solid ${T.red}` }}>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16 }}>Résidence Les Alpes</div>
-            <div style={S.sub}>Sion · 12 appartements · 2 bâtiments</div>
-          </div>
-          <Tag color={T.amber} bg={T.amberBg}>En soumission</Tag>
-        </div>
-        <div style={{ marginTop: 12 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-            <span style={{ ...S.sub, fontSize: 12 }}>Adjudication des lots</span>
-            <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 12 }}>1 / 5</span>
-          </div>
-          <div style={{ display: "flex", gap: 3 }}>
-            {[1, 0, 0, 0, 0].map((v, i) => <div key={i} style={{ flex: 1, height: 6, borderRadius: 2, background: v ? T.green : T.soft }} />)}
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 14, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>
-          {[["5", "lots"], ["11", "invitées"], ["7", "soumissions"]].map(([n, l]) => (
-            <div key={l}><span style={{ fontFamily: FONT, fontWeight: 900, fontSize: 16, color: T.red }}>{n}</span><span style={{ ...S.sub, fontSize: 11.5, marginLeft: 4 }}>{l}</span></div>
-          ))}
-        </div>
-      </Card>
-      <Card style={{ marginTop: 10, opacity: 0.75 }}>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <div>
-            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15 }}>Villa jumelle — Grimisuat</div>
-            <div style={S.sub}>Livré en mai 2026 · 8 lots adjugés</div>
-          </div>
-          <Tag color={T.green} bg={T.greenBg}>Terminé</Tag>
-        </div>
-      </Card>
-      <button style={{ width: "100%", marginTop: 12, fontFamily: FONT, fontWeight: 700, fontSize: 14, color: T.red, background: T.redBg, border: `1.5px dashed ${T.red}`, borderRadius: 11, padding: "13px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-        <Plus size={17} /> Nouveau projet
-      </button>
-    </div>
-  );
-
-  const PromoProjectScreen = () => (
-    <div style={{ padding: 16 }}>
-      <Back onClick={() => go("promoHome")} label="Mes projets" />
-      <h1 style={{ ...S.h1, fontSize: 22 }}>Résidence Les Alpes</h1>
-      <p style={{ ...S.sub, margin: "4px 0 16px" }}>Sion · 12 appartements · Documents contractuels et séries de prix par lot. Chaque entreprise ne voit que ses lots.</p>
-      <div style={S.label}>Lots</div>
+      <p style={{ ...S.sub, margin: "0 0 14px" }}>Chantiers publiés pour {PROMO_ORG} — comparez les soumissions et adjugez.</p>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+        <KPI n={actifs.length} l="projets actifs" c={T.red} /><KPI n={totalSoum} l="soumissions reçues" />
+      </div>
+      <div style={S.label}>Actifs</div>
       <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
-        {LOTS.map(l => (
-          <Card key={l.n} onClick={() => l.go && go("promoLot")} style={l.go ? { border: `2px solid ${T.red}` } : {}}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5 }}>{l.n}</div>
-                <div style={{ ...S.sub, fontSize: 12.5, marginTop: 2 }}>{l.info}</div>
+        {actifs.map(c => {
+          const mine = soumissions.filter(s => s.chantierId === c.id);
+          const meilleure = mine.length ? Math.min(...mine.map(s => s.total)) : null;
+          return (
+            <Card key={c.id} onClick={() => { setPilotChantierId(c.id); go("adminChantierCompare"); }} style={{ borderLeft: `4px solid ${T.red}` }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 16 }}>{c.titre}</div>
+                  <div style={S.sub}>{c.ville} · {c.categorie}</div>
+                </div>
+                <Tag color={c.statut === "Attribué" ? T.green : T.amber} bg={c.statut === "Attribué" ? T.greenBg : T.amberBg}>{c.statut}</Tag>
               </div>
-              <Tag color={l.c} bg={l.bg}>{l.st}</Tag>
+              <div style={{ display: "flex", gap: 14, marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.line}` }}>
+                {[[String(mine.length), mine.length > 1 ? "soumissions" : "soumission"], [meilleure ? meilleure.toLocaleString("fr-CH") : "—", "meilleur prix CHF"]].map(([n, l]) => (
+                  <div key={l}><span style={{ fontFamily: FONT, fontWeight: 900, fontSize: 16, color: T.red }}>{n}</span><span style={{ ...S.sub, fontSize: 11.5, marginLeft: 4 }}>{l}</span></div>
+                ))}
+              </div>
+            </Card>
+          );
+        })}
+        {actifs.length === 0 && <Card><div style={S.sub}>Aucun projet actif. Publiez-en un pour recevoir des soumissions structurées.</div></Card>}
+      </div>
+      {termines.length > 0 && <>
+        <div style={{ ...S.label, marginTop: 18 }}>Terminés</div>
+        {termines.map(c => (
+          <Card key={c.id} style={{ marginTop: 8, opacity: 0.75 }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15 }}>{c.titre}</div>
+                <div style={S.sub}>{c.ville}</div>
+              </div>
+              <Tag color={T.green} bg={T.greenBg}>Terminé</Tag>
             </div>
           </Card>
         ))}
-      </div>
-      <Card style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center" }}>
-        <Users size={22} color={T.sub} />
-        <div>
-          <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13.5 }}>Équipe projet</div>
-          <div style={{ ...S.sub, fontSize: 12.5 }}>2 architectes · 1 DT · permissions par lot</div>
-        </div>
-      </Card>
+      </>}
+      <button onClick={startPromoProject} style={{ width: "100%", marginTop: 12, fontFamily: FONT, fontWeight: 700, fontSize: 14, color: T.red, background: T.redBg, border: `1.5px dashed ${T.red}`, borderRadius: 11, padding: "13px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+        <Plus size={17} /> Nouveau projet
+      </button>
     </div>
-  );
-
-  const PromoLotScreen = () => (
-    <div style={{ padding: 16 }}>
-      <Back onClick={() => go("promoProject")} label="Résidence Les Alpes" />
-      <h1 style={{ ...S.h1, fontSize: 22 }}>Lot 03 — Carrelage</h1>
-      <p style={{ ...S.sub, margin: "4px 0 14px" }}>3 soumissions sur série de prix · Délai clos le 10 juillet · 12 appartements + communs</p>
-      <div style={{ overflowX: "auto", margin: "0 -16px", padding: "0 16px" }}>
-        <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 430, fontFamily: FONT, fontSize: 12.5 }}>
-          <thead><tr>
-            <th style={{ textAlign: "left", padding: "8px 6px", ...S.label, fontSize: 10 }}>Position</th>
-            {["MV-3 PRO", "Dubuis", "Batisol"].map(e => <th key={e} style={{ padding: "8px 6px", fontWeight: 800 }}>{e}</th>)}
-          </tr></thead>
-          <tbody>
-            {[["Sols apparts 60×60 (640 m²)", "78'400", "82'100", "80'250"],
-            ["Murs SdB (380 m²)", "52'900", "55'800", "54'100"],
-            ["Communs grand format", "24'600", "26'900", "25'300"],
-            ["Plinthes et profils", "12'500", "13'400", "12'900"]].map(([p, a, b, c], i) => (
-              <tr key={p}>
-                <td style={{ padding: "9px 6px", fontWeight: 600, borderTop: `1px solid ${T.line}` }}>{p}</td>
-                {[a, b, c].map((v, j) => (
-                  <td key={j} style={{ padding: "9px 6px", textAlign: "center", borderTop: `1px solid ${T.line}`, fontWeight: j === 0 ? 800 : 500, color: j === 0 ? T.green : T.ink }}>{v}</td>
-                ))}
-              </tr>
-            ))}
-            <tr>
-              <td style={{ padding: "10px 6px", fontWeight: 900, borderTop: `2px solid ${T.ink}` }}>Total</td>
-              {[["168'400", T.green], ["178'200", T.ink], ["172'550", T.ink]].map(([v, c], j) => (
-                <td key={j} style={{ padding: "10px 6px", textAlign: "center", borderTop: `2px solid ${T.ink}`, fontWeight: 900, fontSize: 13.5, color: c }}>{v}</td>
-              ))}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <Card style={{ marginTop: 12, background: T.greenBg, border: "none" }}>
-        <div style={{ ...S.sub, color: T.green, fontWeight: 700 }}>💡 MV-3 PRO : meilleure offre (−5.5 %), note 4.9, disponible dès septembre. Écart max entre offres : 9'800 CHF.</div>
-      </Card>
-      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <Btn kind="soft" style={{ fontSize: 13 }}><MessageSquare size={15} /> Négocier</Btn>
-        <Btn kind="green" style={{ fontSize: 13 }}><Check size={16} strokeWidth={3} /> Adjuger à MV-3 PRO</Btn>
-      </div>
-    </div>
-  );
+    );
+  };
 
   /* ================= ADMIN ================= */
   const AdminHomeScreen = () => {
@@ -1413,7 +1352,7 @@ export default function App() {
   const CH_LAST = CH_STEPS.length - 1;
   const AdminPublishScreen = () => {
     const next = () => chStep < CH_LAST ? setChStep(chStep + 1) : publishChantier();
-    const back = () => chStep > 0 ? setChStep(chStep - 1) : go("adminHome");
+    const back = () => chStep > 0 ? setChStep(chStep - 1) : go(role === "promo" ? "promoHome" : "adminHome");
     const showEtage = chForm.typeBien === "Appartement" || chForm.typeBien === "Immeuble";
     return (
       <div style={{ padding: 16 }}>
@@ -1436,15 +1375,17 @@ export default function App() {
           </div>
           <textarea placeholder="Description des travaux demandés…" value={chForm.desc} onChange={e => setChForm(f => ({ ...f, desc: e.target.value }))}
             style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT, fontSize: 14, padding: 13, borderRadius: 12, border: `1px solid ${T.line}`, background: T.white, minHeight: 90, resize: "none", outline: "none" }} />
-          <div style={S.label}>Publié pour le compte de</div>
-          <div style={{ display: "grid", gap: 8 }}>
-            <Chip active={!chForm.demandeur} onClick={() => setChForm(f => ({ ...f, demandeur: "" }))}>MV3 Connect (direct)</Chip>
-            <Chip active={!!chForm.demandeur} onClick={() => setChForm(f => ({ ...f, demandeur: f.demandeur || " " }))}>Un promoteur / une régie</Chip>
-          </div>
-          {!!chForm.demandeur && (
-            <input placeholder="Nom du promoteur (ex. Architecture Rhône SA)" value={chForm.demandeur.trim()} onChange={e => setChForm(f => ({ ...f, demandeur: e.target.value }))}
-              style={{ fontFamily: FONT, fontSize: 14, padding: "12px 14px", borderRadius: 10, border: `1px solid ${T.line}`, background: T.white, outline: "none" }} />
-          )}
+          {role === "admin" && <>
+            <div style={S.label}>Publié pour le compte de</div>
+            <div style={{ display: "grid", gap: 8 }}>
+              <Chip active={!chForm.demandeur} onClick={() => setChForm(f => ({ ...f, demandeur: "" }))}>MV3 Connect (direct)</Chip>
+              <Chip active={!!chForm.demandeur} onClick={() => setChForm(f => ({ ...f, demandeur: f.demandeur || " " }))}>Un promoteur / une régie</Chip>
+            </div>
+            {!!chForm.demandeur && (
+              <input placeholder="Nom du promoteur (ex. Architecture Rhône SA)" value={chForm.demandeur.trim()} onChange={e => setChForm(f => ({ ...f, demandeur: e.target.value }))}
+                style={{ fontFamily: FONT, fontSize: 14, padding: "12px 14px", borderRadius: 10, border: `1px solid ${T.line}`, background: T.white, outline: "none" }} />
+            )}
+          </>}
         </div>}
 
         {chStep === 1 && <div style={{ display: "grid", gap: 10 }}>
@@ -1586,7 +1527,7 @@ export default function App() {
       </div>
       <h1 style={{ ...S.h1, fontSize: 24 }}>Chantier publié !</h1>
       <p style={{ ...S.sub, margin: "10px 20px 24px" }}>Les entreprises compatibles peuvent désormais consulter le dossier et soumissionner avec le bordereau structuré.</p>
-      <Btn onClick={() => go("adminPilot")}>Voir le pilotage marketplace</Btn>
+      <Btn onClick={() => go(role === "promo" ? "promoHome" : "adminPilot")}>{role === "promo" ? "Voir mes projets" : "Voir le pilotage marketplace"}</Btn>
     </div>
   );
 
@@ -1701,10 +1642,10 @@ export default function App() {
     const suivi = suivis.find(sv => sv.chantierId === ch.id);
     return (
       <div style={{ padding: 16 }}>
-        <Back onClick={() => go("adminPilot")} label="Pilotage marketplace" />
+        <Back onClick={() => go(role === "promo" ? "promoHome" : "adminPilot")} label={role === "promo" ? "Mes projets" : "Pilotage marketplace"} />
         <h1 style={{ ...S.h1, fontSize: 21 }}>{ch.titre}</h1>
         <p style={{ ...S.sub, margin: "4px 0 14px" }}>{ch.ville} · {mine.length} soumission{mine.length > 1 ? "s" : ""} · statut {ch.statut}</p>
-        {ch.demandeur && (
+        {ch.demandeur && role === "admin" && (
           <Card style={{ marginBottom: 10, background: T.amberBg, border: "none" }}>
             <div style={{ ...S.sub, color: T.amber, fontWeight: 600 }}>Publié pour le compte de <b>{ch.demandeur}</b>. En l'absence de décision de sa part, vous pouvez adjuger ce chantier en son nom.</div>
           </Card>
@@ -1736,7 +1677,7 @@ export default function App() {
                   <button onClick={() => viewPdf(s.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 4, fontFamily: FONT, fontWeight: 700, fontSize: 12, color: T.sub }}>
                     <FileText size={13} /> PDF
                   </button>
-                  {s.statut === "En attente" && <Btn kind="green" style={{ width: "auto", fontSize: 12, padding: "9px 14px" }} onClick={() => adjuger(ch.id, s.id)}><Check size={14} strokeWidth={3} /> {ch.demandeur ? `Adjuger au nom de ${ch.demandeur}` : "Adjuger"}</Btn>}
+                  {s.statut === "En attente" && <Btn kind="green" style={{ width: "auto", fontSize: 12, padding: "9px 14px" }} onClick={() => adjuger(ch.id, s.id)}><Check size={14} strokeWidth={3} /> {ch.demandeur && role === "admin" ? `Adjuger au nom de ${ch.demandeur}` : "Adjuger"}</Btn>}
                 </div>
               </div>
             </Card>
@@ -1750,7 +1691,7 @@ export default function App() {
   /* ================= SUIVI DE CHANTIER (après adjudication) ================= */
   const SuiviScreen = () => {
     const suivi = suivis.find(s => s.id === suiviId);
-    const backTarget = role === "admin" ? "adminChantierCompare" : "proSent";
+    const backTarget = role === "pro" ? "proSent" : role === "client" ? "requests" : "adminChantierCompare";
     if (!suivi) return (
       <div style={{ padding: 16 }}>
         <Back onClick={() => go(backTarget)} label="Retour" />
@@ -1760,6 +1701,7 @@ export default function App() {
     const ch = chantiers.find(c => c.id === suivi.chantierId);
     const pct = Math.round((suivi.jalons.filter(j => j.done).length / suivi.jalons.length) * 100);
     const PHOTO_CATS = [["avant", "Avant"], ["pendant", "Pendant"], ["apres", "Après"]];
+    const canEdit = role !== "client";
     return (
       <div style={{ padding: 16 }}>
         <Back onClick={() => go(backTarget)} label="Retour" />
@@ -1789,22 +1731,24 @@ export default function App() {
         <Card>
           {suivi.jalons.map((j, i) => (
             <div key={j.id} style={{ padding: "10px 0", borderTop: i ? `1px solid ${T.line}` : "none" }}>
-              <div onClick={() => toggleJalon(suivi.id, j.id)} style={{ display: "flex", gap: 10, alignItems: "center", cursor: "pointer" }}>
+              <div onClick={() => canEdit && toggleJalon(suivi.id, j.id)} style={{ display: "flex", gap: 10, alignItems: "center", cursor: canEdit ? "pointer" : "default" }}>
                 {j.done ? <CheckCircle2 size={19} color={T.green} /> : <Clock size={19} color={T.sub} />}
                 <span style={{ ...S.body, fontWeight: 700, fontSize: 13.5, color: j.done ? T.ink : T.sub }}>{j.label}</span>
               </div>
-              {j.id === "acompte" && (
+              {j.id === "acompte" && ((suivi.documents || []).some(d => d.jalonId === "acompte") || canEdit) && (
                 <div style={{ marginLeft: 29, marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {(suivi.documents || []).filter(d => d.jalonId === "acompte").map(d => (
                     <a key={d.id} href={d.url} download={d.name} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: FONT, fontSize: 12, fontWeight: 700, color: T.red, background: T.redBg, padding: "6px 10px", borderRadius: 8, textDecoration: "none" }}>
                       <FileText size={13} /> {d.name}
-                      <span onClick={e => { e.preventDefault(); removeSuiviDoc(suivi.id, d.id); }} style={{ display: "flex", marginLeft: 2 }}><X size={12} /></span>
+                      {canEdit && <span onClick={e => { e.preventDefault(); removeSuiviDoc(suivi.id, d.id); }} style={{ display: "flex", marginLeft: 2 }}><X size={12} /></span>}
                     </a>
                   ))}
-                  <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: FONT, fontSize: 12, fontWeight: 700, color: T.sub, border: `1.5px dashed ${T.line}`, padding: "6px 10px", borderRadius: 8, cursor: "pointer" }}>
-                    <input type="file" accept="application/pdf" onChange={e => { addSuiviDoc(suivi.id, "acompte", e.target.files[0]); e.target.value = ""; }} style={{ display: "none" }} />
-                    <Plus size={12} /> Joindre le PDF de demande d'acompte
-                  </label>
+                  {canEdit && (
+                    <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontFamily: FONT, fontSize: 12, fontWeight: 700, color: T.sub, border: `1.5px dashed ${T.line}`, padding: "6px 10px", borderRadius: 8, cursor: "pointer" }}>
+                      <input type="file" accept="application/pdf" onChange={e => { addSuiviDoc(suivi.id, "acompte", e.target.files[0]); e.target.value = ""; }} style={{ display: "none" }} />
+                      <Plus size={12} /> Joindre le PDF de demande d'acompte
+                    </label>
+                  )}
                 </div>
               )}
             </div>
@@ -1818,22 +1762,30 @@ export default function App() {
               {suivi.photos[cat].map((p, i) => (
                 <div key={i} style={{ position: "relative", borderRadius: 10, overflow: "hidden", aspectRatio: "1", background: T.soft }}>
                   <img src={p.url} alt={p.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                  <button onClick={() => removeSuiviPhoto(suivi.id, cat, i)} style={{ position: "absolute", top: 4, right: 4, width: 20, height: 20, borderRadius: "50%", background: "rgba(22,24,28,.75)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {canEdit && <button onClick={() => removeSuiviPhoto(suivi.id, cat, i)} style={{ position: "absolute", top: 4, right: 4, width: 20, height: 20, borderRadius: "50%", background: "rgba(22,24,28,.75)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <X size={11} color="#fff" />
-                  </button>
+                  </button>}
                 </div>
               ))}
-              <label style={{ background: T.white, border: `1.5px dashed ${T.line}`, borderRadius: 10, aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
-                <input type="file" accept="image/*" multiple onChange={e => { addSuiviPhoto(suivi.id, cat, e.target.files); e.target.value = ""; }} style={{ display: "none" }} />
-                <Camera size={18} color={T.sub} />
-              </label>
+              {canEdit && (
+                <label style={{ background: T.white, border: `1.5px dashed ${T.line}`, borderRadius: 10, aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+                  <input type="file" accept="image/*" multiple onChange={e => { addSuiviPhoto(suivi.id, cat, e.target.files); e.target.value = ""; }} style={{ display: "none" }} />
+                  <Camera size={18} color={T.sub} />
+                </label>
+              )}
+              {!canEdit && suivi.photos[cat].length === 0 && <div style={{ ...S.sub, fontSize: 11.5 }}>Aucune photo</div>}
             </div>
           </div>
         ))}
 
-        {suivi.statut !== "Terminé" && (
+        {canEdit && suivi.statut !== "Terminé" && (
           <div style={{ marginTop: 18 }}>
             <Btn kind="green" onClick={() => finirChantier(suivi.id)}><CheckCircle2 size={18} /> Marquer le chantier terminé</Btn>
+          </div>
+        )}
+        {role === "client" && suivi.statut === "Terminé" && (
+          <div style={{ marginTop: 18 }}>
+            <Btn kind="soft" onClick={() => go("review")}><Star size={17} /> {review.done ? "Voir mon évaluation" : "Évaluer l'entreprise"}</Btn>
           </div>
         )}
       </div>
@@ -1844,7 +1796,7 @@ export default function App() {
   const BordereauPdfScreen = () => {
     const s = soumissions.find(x => x.id === pdfSoumissionId);
     const ch = s && chantiers.find(c => c.id === s.chantierId);
-    const backTarget = role === "admin" ? "adminPilot" : "proSent";
+    const backTarget = role === "pro" ? "proSent" : role === "client" ? "offerDetail" : role === "promo" ? "adminChantierCompare" : "adminPilot";
     if (!s || !ch) return (
       <div className="no-print" style={{ padding: 16 }}>
         <Back onClick={() => go(backTarget)} label="Retour" />
@@ -2122,7 +2074,7 @@ export default function App() {
     const data = {
       client: [["Nom", "Client démo"], ["Commune", "Savièse (VS)"], ["Langue", "Français"], ["Notifications", "Push + e-mail"], ["Mes documents", "2 contrats signés"]],
       pro: [["Note", "4.9 / 5 · 214 chantiers"], ["Zones", "Valais central · 25 km"], ["Catalogue", "Sync Dolibarr ✓"], ["Documents", "RC ✓ · AVS ✓ · Assurance ✓"], ["Abonnement", "Premium · commission 4 %"], ["Équipe", "4 utilisateurs"]],
-      promo: [["Organisation", "Architecture Rhône SA"], ["Projets actifs", "1 · 5 lots"], ["Équipe", "2 architectes + 1 DT"], ["Modèles", "Séries de prix CAN"]],
+      promo: [["Organisation", PROMO_ORG], ["Projets actifs", String(chantiers.filter(c => c.demandeur === PROMO_ORG && c.statut !== "Terminé").length)], ["Équipe", "2 architectes + 1 DT"], ["Modèles", "Séries de prix CAN"]],
       admin: [["Rôle", "Super-admin"], ["Entreprises actives", "142 vérifiées"], ["Demandes / mois", "380"], ["Journal d'audit", "Toutes les actions tracées"]],
     };
     return (
@@ -2205,14 +2157,23 @@ export default function App() {
   );
 
   /* ================= PAIEMENT ACOMPTE ================= */
-  const PayScreen = () => (
+  const PayScreen = () => {
+    const s = soumissions.find(x => x.id === selectedSoumissionId);
+    const acompte = s ? Math.round(s.total * 0.3) : 0;
+    const accepterEtPayer = () => {
+      if (!s) return;
+      adjuger(s.chantierId, s.id);
+      setSuiviId("suivi-" + s.id);
+      go("suivi");
+    };
+    return (
     <div style={{ padding: 16 }}>
       <Back onClick={() => go("sign")} label="Signature" />
       <h1 style={{ ...S.h1, fontSize: 22 }}>Acompte de 30 %</h1>
-      <p style={{ ...S.sub, margin: "6px 0 14px" }}>Offre {variant} · Total {VARIANTES[variant].prix} CHF · Acompte sécurisé en séquestre jusqu'au début des travaux</p>
+      <p style={{ ...S.sub, margin: "6px 0 14px" }}>Offre de {s ? s.entreprise : "—"} · Total {s ? s.total.toLocaleString("fr-CH") : "—"} CHF · Acompte sécurisé en séquestre jusqu'au début des travaux</p>
       <Card style={{ textAlign: "center", padding: 18 }}>
         <div style={S.label}>Montant à payer</div>
-        <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 32, color: T.red, margin: "6px 0", letterSpacing: "-0.02em" }}>6'060 CHF</div>
+        <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 32, color: T.red, margin: "6px 0", letterSpacing: "-0.02em" }}>{acompte.toLocaleString("fr-CH")} CHF</div>
         <div style={{ ...S.sub, fontSize: 12 }}>Libéré à l'entreprise au démarrage du chantier</div>
       </Card>
       <div style={{ ...S.label, margin: "16px 0 8px" }}>Moyen de paiement</div>
@@ -2233,13 +2194,14 @@ export default function App() {
         </Card>
       )}
       <div style={{ marginTop: 14 }}>
-        <Btn kind="green" onClick={() => { setSigned(true); setAccepted(true); go("works"); }}>
-          <Check size={18} strokeWidth={3} /> Payer 6'060 CHF
+        <Btn kind="green" onClick={accepterEtPayer}>
+          <Check size={18} strokeWidth={3} /> Payer {acompte.toLocaleString("fr-CH")} CHF
         </Btn>
       </div>
       <div style={{ ...S.sub, fontSize: 11.5, textAlign: "center", marginTop: 10 }}>Facture générée dans Dolibarr · reçu PDF par e-mail</div>
     </div>
-  );
+    );
+  };
 
   /* ================= NOTIFICATIONS ================= */
   const NotifsScreen = () => {
@@ -2332,11 +2294,11 @@ export default function App() {
   const screens = {
     home: HomeScreen, form: FormScreen, published: PublishedScreen,
     requests: RequestsScreen, request: RequestScreen, offerDetail: OfferDetailScreen,
-    sign: SignScreen, pay: PayScreen, works: WorksScreen, review: ReviewScreen, chat: ChatScreen,
+    sign: SignScreen, pay: PayScreen, review: ReviewScreen, chat: ChatScreen,
     aiAssist: AiAssistScreen, notifs: NotifsScreen,
     proHome: ProHomeScreen, proOpp: ProOppScreen, proBid: ProBidScreen, proSent: ProSentScreen,
     proAgenda: ProAgendaScreen, proStats: ProStatsScreen, proOnboard: ProOnboardScreen,
-    promoHome: PromoHomeScreen, promoProject: PromoProjectScreen, promoLot: PromoLotScreen,
+    promoHome: PromoHomeScreen,
     adminHome: AdminHomeScreen, adminQueue: AdminQueueScreen, adminRequest: AdminRequestScreen,
     adminPublish: AdminPublishScreen, chantierPublished: ChantierPublishedScreen,
     adminPilot: AdminPilotScreen, adminChantierCompare: AdminChantierCompareScreen,
