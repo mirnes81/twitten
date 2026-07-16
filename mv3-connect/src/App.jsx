@@ -47,8 +47,8 @@ const Chip = ({ children, active, onClick, style }) => (
     background: active ? T.redBg : T.white, color: T.ink, display: "flex", alignItems: "center", gap: 8, ...style
   }}>{active && <Check size={16} color={T.red} strokeWidth={3} />}{children}</button>
 );
-const Tag = ({ children, color = T.sub, bg = T.soft }) => (
-  <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color, background: bg, padding: "3px 8px", borderRadius: 6, whiteSpace: "nowrap" }}>{children}</span>
+const Tag = ({ children, color = T.sub, bg = T.soft, style }) => (
+  <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11, color, background: bg, padding: "3px 8px", borderRadius: 6, whiteSpace: "nowrap", ...style }}>{children}</span>
 );
 const TileProgress = ({ step, total }) => (
   <div style={{ display: "flex", gap: 3 }}>
@@ -223,12 +223,14 @@ const CHANTIERS_INIT = [
     budget: "180 000 CHF", delai: "Dans le mois", limite: "10 juillet", statut: "Ouvert",
     prive: true, neuf: true, match: 92, tags: ["Résidence Les Alpes", "12 apparts", "Série de prix"],
     invites: ["MV-3 PRO Sàrl", "Carrelage Dubuis Sàrl", "Batisol Valais SA", "Ceramica Rhône Sàrl"],
+    demandeur: "Architecture Rhône SA",
   },
 ];
 const emptyChForm = () => ({
   titre: "", categorie: "Carrelage", ville: "", adresse: "", typeBien: "Appartement", etage: "", numAppart: "", desc: "",
   metres: metresDefaut("Carrelage"),
   budget: "10 000 – 25 000 CHF", delai: "Dans le mois", limite: "", prive: false, invites: [], photos: [],
+  demandeur: "",
 });
 const NOTES_ENTREPRISES = { "MV-3 PRO Sàrl": 4.9, "Carrelage Dubuis Sàrl": 4.8, "Batisol Valais SA": 4.6, "Ceramica Rhône Sàrl": 4.4 };
 const SOUMISSIONS_SEED = [
@@ -250,6 +252,11 @@ const SUIVIS_SEED = [
     ],
     photos: { avant: [], pendant: [], apres: [] }, documents: [], statut: "En cours",
   },
+];
+/* ---------------- Commission plateforme (facturation entreprises) ---------------- */
+const COMMISSION_RATES = { Starter: 0.10, Pro: 0.07, Premium: 0.04 };
+const FACTURES_SEED = [
+  { id: "f-s6", soumissionId: "s6", chantierId: 2, entreprise: "MV-3 PRO Sàrl", montant: 6120, taux: 0.04, commission: 245, statut: "Payée", date: "La semaine dernière" },
 ];
 const LOTS = [
   { n: "Lot 01 — Démolition", st: "Adjugé", c: T.sub, bg: T.soft, info: "Démo Valais SA · 84'500 CHF" },
@@ -287,6 +294,8 @@ export default function App() {
   const [pilotChantierId, setPilotChantierId] = useState(1);
   const [suiviId, setSuiviId] = useState(null);
   const [pdfSoumissionId, setPdfSoumissionId] = useState(null);
+  const [factures, setFactures] = useState(FACTURES_SEED);
+  const [pdfFactureId, setPdfFactureId] = useState(null);
   const [chatChantierId, setChatChantierId] = useState(null);
   const [chStep, setChStep] = useState(0);
   const [chForm, setChForm] = useState(emptyChForm());
@@ -338,7 +347,7 @@ export default function App() {
   const removeChPhoto = i => setChForm(f => ({ ...f, photos: f.photos.filter((_, j) => j !== i) }));
   const publishChantier = () => {
     const id = Math.max(0, ...chantiers.map(c => c.id)) + 1;
-    setChantiers([{ ...chForm, id, statut: "Ouvert", neuf: true, match: 90, tags: [chForm.categorie] }, ...chantiers]);
+    setChantiers([{ ...chForm, demandeur: chForm.demandeur.trim(), id, statut: "Ouvert", neuf: true, match: 90, tags: [chForm.categorie] }, ...chantiers]);
     notify("pro", "Nouveau chantier publié", `${chForm.titre || chForm.categorie} — ${chForm.ville || "lieu à confirmer"}`, T.red);
     setChStep(0);
     setChForm(emptyChForm());
@@ -373,7 +382,16 @@ export default function App() {
           id: "suivi-" + soumissionId, chantierId, soumissionId, entreprise: gagnante.entreprise,
           jalons: JALONS_DEFAULT(), photos: { avant: [], pendant: [], apres: [] }, documents: [], statut: "En cours",
         }, ...sv]);
-        if (gagnante.entreprise === "MV-3 PRO Sàrl") notify("pro", "Chantier gagné 🎉", `${ch ? ch.titre : "Chantier"} — contrat attribué`, T.green);
+        const taux = gagnante.entreprise === "MV-3 PRO Sàrl" ? (COMMISSION_RATES[plan] || COMMISSION_RATES.Premium) : COMMISSION_RATES.Pro;
+        const commission = Math.round(gagnante.total * taux);
+        setFactures(f => f.some(x => x.soumissionId === soumissionId) ? f : [{
+          id: "f" + Date.now(), soumissionId, chantierId, entreprise: gagnante.entreprise,
+          montant: gagnante.total, taux, commission, statut: "Due", date: "À l'instant",
+        }, ...f]);
+        if (gagnante.entreprise === "MV-3 PRO Sàrl") {
+          notify("pro", "Chantier gagné 🎉", `${ch ? ch.titre : "Chantier"} — contrat attribué`, T.green);
+          notify("pro", "Facture de commission émise", `${Math.round(taux * 100)} % sur ${gagnante.total.toLocaleString("fr-CH")} CHF — ${commission.toLocaleString("fr-CH")} CHF dus à MV3 Connect`, T.amber);
+        }
       }
       updated.filter(x => x.chantierId === chantierId && x.id !== soumissionId && x.entreprise === "MV-3 PRO Sàrl")
         .forEach(() => notify("pro", "Soumission non retenue", `${ch ? ch.titre : "Chantier"} — une autre entreprise a été choisie`, T.sub));
@@ -381,6 +399,8 @@ export default function App() {
     });
     setChantiers(cs => cs.map(c => c.id === chantierId ? { ...c, statut: "Attribué" } : c));
   };
+  const payerFacture = id => setFactures(f => f.map(x => x.id !== id ? x : { ...x, statut: "Payée" }));
+  const viewFacturePdf = id => { setPdfFactureId(id); go("facturePdf"); };
   const toggleJalon = (sid, jid) => setSuivis(sv => sv.map(s => s.id !== sid ? s : {
     ...s, jalons: s.jalons.map(j => j.id === jid ? { ...j, done: !j.done } : j),
   }));
@@ -1008,6 +1028,7 @@ export default function App() {
           <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 14, color: T.green, background: T.greenBg, padding: "5px 10px", borderRadius: 8 }}>{ch.match} %</div>
         </div>
         <p style={{ ...S.sub, margin: "4px 0 14px" }}>{ch.ville} · {ch.dist || "—"} · {ch.budget} · {ch.delai} · Limite {ch.limite}</p>
+        {ch.demandeur && <div style={{ marginBottom: 10 }}><Tag color={T.ink} bg={T.soft}>Pour le compte de : {ch.demandeur}</Tag></div>}
         <Card>
           <div style={S.label}>Dossier</div>
           <div style={{ ...S.body, marginTop: 6 }}>{ch.desc}</div>
@@ -1162,6 +1183,8 @@ export default function App() {
   const ProStatsScreen = () => {
     const months = [["Mars", 34], ["Avril", 52], ["Mai", 41], ["Juin", 68], ["Juil.", 47]];
     const max = 68;
+    const mesFactures = factures.filter(f => f.entreprise === "MV-3 PRO Sàrl");
+    const totalDu = mesFactures.filter(f => f.statut === "Due").reduce((s, f) => s + f.commission, 0);
     return (
       <div style={{ padding: 16 }}>
         <h1 style={{ ...S.h1, margin: "10px 0 16px" }}>Statistiques</h1>
@@ -1199,11 +1222,40 @@ export default function App() {
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
             <TrendingUp size={24} color="#7BE0A3" />
             <div>
-              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: "#fff" }}>Plan Premium · commission 4 %</div>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14, color: "#fff" }}>Plan {plan} · commission {Math.round(COMMISSION_RATES[plan] * 100)} %</div>
               <div style={{ fontFamily: FONT, fontSize: 12.5, color: "#B9BDC6" }}>Appels d'offres privés inclus · Sync Dolibarr active</div>
             </div>
           </div>
         </Card>
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "18px 0 8px" }}>
+          <div style={S.label}>Facturation MV3 Connect</div>
+          {totalDu > 0 && <Tag color={T.red} bg={T.redBg}>{totalDu.toLocaleString("fr-CH")} CHF dus</Tag>}
+        </div>
+        {mesFactures.length === 0 && <Card><div style={S.sub}>Aucune commission facturée pour l'instant.</div></Card>}
+        {mesFactures.map(f => {
+          const ch = chantiers.find(c => c.id === f.chantierId);
+          return (
+            <Card key={f.id} style={{ marginBottom: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14 }}>{ch ? ch.titre : "Chantier"}</div>
+                  <div style={{ ...S.sub, fontSize: 12 }}>Commission {Math.round(f.taux * 100)} % sur {f.montant.toLocaleString("fr-CH")} CHF · {f.date}</div>
+                </div>
+                <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 15 }}>{f.commission.toLocaleString("fr-CH")}<span style={{ fontSize: 11, color: T.sub }}> CHF</span></div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
+                <Tag color={f.statut === "Payée" ? T.green : T.amber} bg={f.statut === "Payée" ? T.greenBg : T.amberBg}>{f.statut}</Tag>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <button onClick={() => viewFacturePdf(f.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 4, fontFamily: FONT, fontWeight: 700, fontSize: 12, color: T.sub }}>
+                    <FileText size={13} /> PDF
+                  </button>
+                  {f.statut === "Due" && <Btn kind="dark" style={{ width: "auto", fontSize: 12, padding: "9px 14px" }} onClick={() => payerFacture(f.id)}>Payer</Btn>}
+                </div>
+              </div>
+            </Card>
+          );
+        })}
       </div>
     );
   };
@@ -1323,12 +1375,14 @@ export default function App() {
   );
 
   /* ================= ADMIN ================= */
-  const AdminHomeScreen = () => (
+  const AdminHomeScreen = () => {
+    const totalCommissions = factures.reduce((s, f) => s + f.commission, 0);
+    return (
     <div style={{ padding: 16 }}>
       <h1 style={{ ...S.h1, margin: "10px 0 16px" }}>Cockpit</h1>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         <KPI n="14" l="demandes aujourd'hui" c={T.red} /><KPI n="5" l="à vérifier" c={T.amber} />
-        <KPI n="38 %" l="taux de conversion" c={T.green} /><KPI n="4'320" l="CHF commissions / sem." />
+        <KPI n="38 %" l="taux de conversion" c={T.green} /><KPI n={totalCommissions.toLocaleString("fr-CH")} l="CHF commissions marketplace" />
       </div>
       <div style={{ ...S.label, margin: "18px 0 8px" }}>Alertes</div>
       {[["Assurance RC expirée — Batisol Valais SA", "Suspension automatique dans 5 jours", T.red, T.redBg],
@@ -1351,7 +1405,8 @@ export default function App() {
         <Btn kind="soft" style={{ fontSize: 13 }} onClick={() => go("adminPilot")}><BarChart3 size={16} /> Pilotage</Btn>
       </div>
     </div>
-  );
+    );
+  };
 
   /* ================= ADMIN — PUBLIER UN CHANTIER ================= */
   const CH_STEPS = ["Description du chantier", "Adresse", "Photos", "Métrés", "Conditions", "Vérification"];
@@ -1381,6 +1436,15 @@ export default function App() {
           </div>
           <textarea placeholder="Description des travaux demandés…" value={chForm.desc} onChange={e => setChForm(f => ({ ...f, desc: e.target.value }))}
             style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT, fontSize: 14, padding: 13, borderRadius: 12, border: `1px solid ${T.line}`, background: T.white, minHeight: 90, resize: "none", outline: "none" }} />
+          <div style={S.label}>Publié pour le compte de</div>
+          <div style={{ display: "grid", gap: 8 }}>
+            <Chip active={!chForm.demandeur} onClick={() => setChForm(f => ({ ...f, demandeur: "" }))}>MV3 Connect (direct)</Chip>
+            <Chip active={!!chForm.demandeur} onClick={() => setChForm(f => ({ ...f, demandeur: f.demandeur || " " }))}>Un promoteur / une régie</Chip>
+          </div>
+          {!!chForm.demandeur && (
+            <input placeholder="Nom du promoteur (ex. Architecture Rhône SA)" value={chForm.demandeur.trim()} onChange={e => setChForm(f => ({ ...f, demandeur: e.target.value }))}
+              style={{ fontFamily: FONT, fontSize: 14, padding: "12px 14px", borderRadius: 10, border: `1px solid ${T.line}`, background: T.white, outline: "none" }} />
+          )}
         </div>}
 
         {chStep === 1 && <div style={{ display: "grid", gap: 10 }}>
@@ -1485,6 +1549,7 @@ export default function App() {
 
         {chStep === 5 && <div style={{ display: "grid", gap: 8 }}>
           {[["Titre", chForm.titre || "—"], ["Catégorie", chForm.categorie],
+          ["Publié pour", chForm.demandeur.trim() || "MV3 Connect (direct)"],
           ["Adresse", [chForm.adresse, chForm.ville].filter(Boolean).join(", ") || "—"],
           ["Type de bien", chForm.typeBien + (chForm.etage ? ` · ${chForm.etage}` : "") + (chForm.numAppart ? ` · N° ${chForm.numAppart}` : "")],
           ["Photos", chForm.photos.length ? `${chForm.photos.length} photo${chForm.photos.length > 1 ? "s" : ""}` : "Aucune"],
@@ -1566,6 +1631,7 @@ export default function App() {
                   <div>
                     <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5 }}>{c.titre}</div>
                     <div style={{ ...S.sub, fontSize: 12 }}>{c.ville} · {mine.length} soumission{mine.length > 1 ? "s" : ""}{meilleure ? ` · dès ${meilleure.toLocaleString("fr-CH")} CHF` : ""}</div>
+                    {c.demandeur && <div style={{ ...S.sub, fontSize: 11, marginTop: 2, fontStyle: "italic" }}>Pour le compte de {c.demandeur}</div>}
                   </div>
                   <Tag color={c.statut === "Attribué" ? T.green : T.amber} bg={c.statut === "Attribué" ? T.greenBg : T.amberBg}>{c.statut}</Tag>
                 </div>
@@ -1596,6 +1662,35 @@ export default function App() {
             </tbody>
           </table>
         </div>
+
+        <div style={{ ...S.label, margin: "18px 0 8px" }}>Commissions de la marketplace</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+          <KPI n={factures.reduce((s, f) => s + f.commission, 0).toLocaleString("fr-CH")} l="CHF commissions totales" c={T.red} />
+          <KPI n={factures.filter(f => f.statut === "Due").reduce((s, f) => s + f.commission, 0).toLocaleString("fr-CH")} l="CHF en attente de paiement" c={T.amber} />
+        </div>
+        {factures.map(f => {
+          const ch = chantiers.find(c => c.id === f.chantierId);
+          return (
+            <Card key={f.id} style={{ marginBottom: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14 }}>{f.entreprise}</div>
+                  <div style={{ ...S.sub, fontSize: 12 }}>{ch ? ch.titre : "Chantier"} · {Math.round(f.taux * 100)} % sur {f.montant.toLocaleString("fr-CH")} CHF</div>
+                </div>
+                <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 15 }}>{f.commission.toLocaleString("fr-CH")}<span style={{ fontSize: 11, color: T.sub }}> CHF</span></div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10, paddingTop: 10, borderTop: `1px solid ${T.line}` }}>
+                <Tag color={f.statut === "Payée" ? T.green : T.amber} bg={f.statut === "Payée" ? T.greenBg : T.amberBg}>{f.statut}</Tag>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <button onClick={() => viewFacturePdf(f.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 4, fontFamily: FONT, fontWeight: 700, fontSize: 12, color: T.sub }}>
+                    <FileText size={13} /> PDF
+                  </button>
+                  {f.statut === "Due" && <Btn kind="soft" style={{ width: "auto", fontSize: 12, padding: "9px 14px" }} onClick={() => payerFacture(f.id)}>Marquer payée</Btn>}
+                </div>
+              </div>
+            </Card>
+          );
+        })}
       </div>
     );
   };
@@ -1609,6 +1704,11 @@ export default function App() {
         <Back onClick={() => go("adminPilot")} label="Pilotage marketplace" />
         <h1 style={{ ...S.h1, fontSize: 21 }}>{ch.titre}</h1>
         <p style={{ ...S.sub, margin: "4px 0 14px" }}>{ch.ville} · {mine.length} soumission{mine.length > 1 ? "s" : ""} · statut {ch.statut}</p>
+        {ch.demandeur && (
+          <Card style={{ marginBottom: 10, background: T.amberBg, border: "none" }}>
+            <div style={{ ...S.sub, color: T.amber, fontWeight: 600 }}>Publié pour le compte de <b>{ch.demandeur}</b>. En l'absence de décision de sa part, vous pouvez adjuger ce chantier en son nom.</div>
+          </Card>
+        )}
         {suivi && (
           <Card onClick={() => { setSuiviId(suivi.id); go("suivi"); }} style={{ marginBottom: 10, background: T.greenBg, border: "none" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1636,7 +1736,7 @@ export default function App() {
                   <button onClick={() => viewPdf(s.id)} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", alignItems: "center", gap: 4, fontFamily: FONT, fontWeight: 700, fontSize: 12, color: T.sub }}>
                     <FileText size={13} /> PDF
                   </button>
-                  {s.statut === "En attente" && <Btn kind="green" style={{ width: "auto", fontSize: 12, padding: "9px 14px" }} onClick={() => adjuger(ch.id, s.id)}><Check size={14} strokeWidth={3} /> Adjuger</Btn>}
+                  {s.statut === "En attente" && <Btn kind="green" style={{ width: "auto", fontSize: 12, padding: "9px 14px" }} onClick={() => adjuger(ch.id, s.id)}><Check size={14} strokeWidth={3} /> {ch.demandeur ? `Adjuger au nom de ${ch.demandeur}` : "Adjuger"}</Btn>}
                 </div>
               </div>
             </Card>
@@ -1846,6 +1946,112 @@ export default function App() {
             <div style={{ marginTop: "auto", paddingTop: 10, borderTop: `1px solid ${T.line}`, display: "flex", justifyContent: "space-between", fontFamily: FONT, fontSize: 9, color: T.sub }}>
               <span>MV3 Connect — document généré automatiquement, valable 30 jours</span>
               <span>Réf. {ref}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /* ================= FACTURE DE COMMISSION — DOCUMENT PDF ================= */
+  const FactureCommissionPdfScreen = () => {
+    const f = factures.find(x => x.id === pdfFactureId);
+    const ch = f && chantiers.find(c => c.id === f.chantierId);
+    const backTarget = role === "admin" ? "adminPilot" : "proStats";
+    if (!f) return (
+      <div className="no-print" style={{ padding: 16 }}>
+        <Back onClick={() => go(backTarget)} label="Retour" />
+        <div style={S.sub}>Facture introuvable.</div>
+      </div>
+    );
+    const ref = "FAC-" + String(f.id).replace(/[^0-9]/g, "").slice(-6).padStart(6, "0");
+    const dateEmission = new Date().toLocaleDateString("fr-CH", { day: "2-digit", month: "long", year: "numeric" });
+    const commissionHT = Math.round(f.commission / 1.081);
+    const tva = f.commission - commissionHT;
+    return (
+      <div>
+        <div className="no-print" style={{ position: "sticky", top: 0, zIndex: 10, background: T.bg, borderBottom: `1px solid ${T.line}`, padding: "12px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+          <Back onClick={() => go(backTarget)} label="Retour" />
+          <Btn style={{ width: "auto", padding: "10px 16px", fontSize: 13 }} onClick={() => window.print()}><FileText size={16} /> Enregistrer en PDF</Btn>
+        </div>
+        <div style={{ overflowX: "auto", padding: "24px 12px", background: "#9C9A91" }}>
+          <div className="pdf-doc" style={{ width: "210mm", minHeight: "297mm", margin: "0 auto", background: "#fff", padding: "16mm 14mm", boxSizing: "border-box", fontFamily: FONT, color: T.ink, boxShadow: "0 4px 24px rgba(0,0,0,.25)", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 14, borderBottom: `2px solid ${T.ink}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 26, height: 26, background: T.red, borderRadius: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, padding: 4 }}>
+                  {[0, 1, 2, 3].map(i => <div key={i} style={{ background: "#fff", borderRadius: 1 }} />)}
+                </div>
+                <div>
+                  <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 17, letterSpacing: "-0.02em" }}>MV3 CONNECT</div>
+                  <div style={{ fontFamily: FONT, fontSize: 10, color: T.sub }}>MV3 Connect Sàrl · Sion (VS) · CHE-100.200.300</div>
+                </div>
+              </div>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13, letterSpacing: "0.06em", textTransform: "uppercase", color: T.red }}>Facture de commission</div>
+                <div style={{ fontFamily: FONT, fontSize: 11, color: T.sub, marginTop: 3 }}>N° {ref} · {dateEmission}</div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, margin: "18px 0" }}>
+              <div>
+                <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: T.sub, marginBottom: 6 }}>Facturé à</div>
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14 }}>{f.entreprise}</div>
+                <div style={{ fontFamily: FONT, fontSize: 11.5, color: T.sub, marginTop: 2 }}>Entreprise partenaire MV3 Connect</div>
+              </div>
+              <div>
+                <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: T.sub, marginBottom: 6 }}>Chantier concerné</div>
+                <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14 }}>{ch ? ch.titre : "—"}</div>
+                <div style={{ fontFamily: FONT, fontSize: 11.5, color: T.sub, marginTop: 2 }}>{ch ? ch.ville : ""} · Soumission gagnée le {f.date}</div>
+              </div>
+            </div>
+
+            <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed", fontFamily: FONT, fontSize: 10.5 }}>
+              <colgroup><col style={{ width: "58%" }} /><col style={{ width: "14%" }} /><col style={{ width: "14%" }} /><col style={{ width: "14%" }} /></colgroup>
+              <thead>
+                <tr>
+                  {["Description", "Montant soumission", "Taux", "Commission"].map((h, i) => (
+                    <th key={h} style={{ textAlign: i === 0 ? "left" : "right", padding: "7px 6px", background: T.soft, fontWeight: 700, fontSize: 9, letterSpacing: "0.04em", textTransform: "uppercase", color: T.sub, borderBottom: `1.5px solid ${T.ink}` }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ padding: "9px 6px", borderBottom: `1px solid ${T.line}`, fontWeight: 600 }}>Commission plateforme MV3 Connect sur chantier attribué</td>
+                  <td style={{ padding: "9px 6px", borderBottom: `1px solid ${T.line}`, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{f.montant.toLocaleString("fr-CH")} CHF</td>
+                  <td style={{ padding: "9px 6px", borderBottom: `1px solid ${T.line}`, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{Math.round(f.taux * 100)} %</td>
+                  <td style={{ padding: "9px 6px", borderBottom: `1px solid ${T.line}`, textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{f.commission.toLocaleString("fr-CH")} CHF</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 14 }}>
+              <div style={{ width: "55%" }}>
+                {[["Montant HT", commissionHT], ["TVA 8.1 %", tva]].map(([lbl, v]) => (
+                  <div key={lbl} style={{ display: "flex", justifyContent: "space-between", padding: "5px 6px", fontFamily: FONT, fontSize: 11 }}>
+                    <span style={{ color: T.sub }}>{lbl}</span>
+                    <span style={{ fontVariantNumeric: "tabular-nums" }}>{v.toLocaleString("fr-CH")} CHF</span>
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "9px 6px", borderTop: `2px solid ${T.ink}`, marginTop: 4 }}>
+                  <span style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13 }}>Total dû</span>
+                  <span style={{ fontFamily: FONT, fontWeight: 900, fontSize: 15, color: T.red, fontVariantNumeric: "tabular-nums" }}>{f.commission.toLocaleString("fr-CH")} CHF</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 18, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 9.5, letterSpacing: "0.08em", textTransform: "uppercase", color: T.sub, marginBottom: 4 }}>Conditions de paiement</div>
+                <div style={{ fontFamily: FONT, fontSize: 11, lineHeight: 1.6 }}>Payable à 30 jours · IBAN CH00 0000 0000 0000 0000 0<br />Statut : <b style={{ color: f.statut === "Payée" ? T.green : T.amber }}>{f.statut}</b></div>
+              </div>
+              <div style={{ width: 64, height: 64, background: T.ink, borderRadius: 8, display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: 2, padding: 6, flexShrink: 0 }}>
+                {Array.from({ length: 25 }).map((_, i) => <div key={i} style={{ background: (i * 7) % 3 ? "#fff" : T.ink, borderRadius: 1 }} />)}
+              </div>
+            </div>
+
+            <div style={{ marginTop: "auto", paddingTop: 10, borderTop: `1px solid ${T.line}`, display: "flex", justifyContent: "space-between", fontFamily: FONT, fontSize: 9, color: T.sub }}>
+              <span>MV3 Connect Sàrl — facture générée automatiquement</span>
+              <span>N° {ref}</span>
             </div>
           </div>
         </div>
@@ -2134,7 +2340,7 @@ export default function App() {
     adminHome: AdminHomeScreen, adminQueue: AdminQueueScreen, adminRequest: AdminRequestScreen,
     adminPublish: AdminPublishScreen, chantierPublished: ChantierPublishedScreen,
     adminPilot: AdminPilotScreen, adminChantierCompare: AdminChantierCompareScreen,
-    suivi: SuiviScreen, bordereauPdf: BordereauPdfScreen,
+    suivi: SuiviScreen, bordereauPdf: BordereauPdfScreen, facturePdf: FactureCommissionPdfScreen,
     profile: ProfileScreen,
   };
 
