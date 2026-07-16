@@ -6,8 +6,9 @@ import {
   CheckCircle2, Clock, Star, Shield, Send, Plus, Minus, X, Check,
   Calendar, TrendingUp, Eye, Image, PenLine, Building2, LayoutDashboard,
   BarChart3, Video, Phone, AlertCircle, FileSignature, Bell,
-  Loader2, CreditCard, QrCode
+  Loader2, CreditCard, QrCode, LogOut, Lock, Mail
 } from "lucide-react";
+import { api, setToken, getToken } from "./api";
 
 /* ---------------- Tokens ---------------- */
 const T = {
@@ -170,101 +171,14 @@ const PRIX_REF = {
 const buildBoqLines = (categorie, metres) => (CATALOGUES[categorie] || CATALOGUES.Carrelage)
   .map(p => ({ code: p.code, d: p.d, u: p.u, q: p.qKey ? (metres[p.qKey] || 0) : 1, pu: PRIX_REF[p.code] || 0 }))
   .filter(l => l.q > 0);
-const ENTREPRISES_DISPO = [
-  { nom: "MV-3 PRO Sàrl", note: 4.9, zone: "Sion · 3 km" },
-  { nom: "Carrelage Dubuis Sàrl", note: 4.8, zone: "Sion · 5 km" },
-  { nom: "Batisol Valais SA", note: 4.6, zone: "Conthey · 9 km" },
-  { nom: "Ceramica Rhône Sàrl", note: 4.4, zone: "Sierre · 28 km" },
-];
-const JALONS_DEFAULT = () => [
-  { id: "acompte", label: "Acompte 30 % reçu", done: false },
-  { id: "debut", label: "Début des travaux", done: false },
-  { id: "cours", label: "Travaux en cours 30 %", done: false },
-  { id: "reception", label: "Réception et solde 10 %", done: false },
-];
-
-/* ---------------- Chantiers publiés (marketplace) ---------------- */
-const CHANTIERS_INIT = [
-  {
-    id: 1, titre: "Salle de bains complète — 7 m²", categorie: "Carrelage", ville: "Savièse", dist: "6 km",
-    desc: "Rénovation complète d'une salle de bains, dépose de l'ancien carrelage, douche italienne à créer.",
-    metres: { surfSol: 7, surfMur: 20, mlEtanch: 9, mlPlinthes: 5, mlSeuils: 2, mlJoints: 6, nbDouches: 1 },
-    budget: "10 000 – 25 000 CHF", delai: "Dans le mois", limite: "25 juillet", statut: "Ouvert",
-    prive: false, neuf: true, match: 96, tags: ["Douche italienne", "Dépose", "Étanchéité"],
-  },
-  {
-    id: 2, titre: "Carrelage sol séjour — 48 m²", categorie: "Carrelage", ville: "Conthey", dist: "9 km",
-    desc: "Pose de carrelage grand format au sol sur chauffage au sol existant, sans dépose.",
-    metres: { surfSol: 48, surfMur: 0, mlEtanch: 0, mlPlinthes: 22, mlSeuils: 3, mlJoints: 14, nbDouches: 0 },
-    budget: "5 000 – 10 000 CHF", delai: "Dans les 2 semaines", limite: "22 juillet", statut: "Ouvert",
-    prive: false, neuf: true, match: 88, tags: ["Grand format 60×120", "Chauffage au sol"],
-  },
-  {
-    id: 3, titre: "Terrasse sur plots — 32 m²", categorie: "Carrelage", ville: "Nendaz", dist: "14 km",
-    desc: "Pose de grès cérame 2 cm sur plots en extérieur, sans étanchéité ni dépose.",
-    metres: { surfSol: 32, surfMur: 0, mlEtanch: 0, mlPlinthes: 0, mlSeuils: 4, mlJoints: 18, nbDouches: 0 },
-    budget: "10 000 – 25 000 CHF", delai: "Flexible", limite: "1 août", statut: "Ouvert",
-    prive: false, neuf: false, match: 74, tags: ["Extérieur", "Grès cérame 2 cm"],
-  },
-  {
-    id: 4, titre: "Appel d'offres privé — Lot 03 Carrelage", categorie: "Carrelage", ville: "Sion", dist: "3 km",
-    desc: "Résidence Les Alpes · 12 appartements · série de prix, sur invitation uniquement.",
-    metres: { surfSol: 640, surfMur: 380, mlEtanch: 120, mlPlinthes: 210, mlSeuils: 38, mlJoints: 96, nbDouches: 12 },
-    budget: "180 000 CHF", delai: "Dans le mois", limite: "10 juillet", statut: "Ouvert",
-    prive: true, neuf: true, match: 92, tags: ["Résidence Les Alpes", "12 apparts", "Série de prix"],
-    invites: ["MV-3 PRO Sàrl", "Carrelage Dubuis Sàrl", "Batisol Valais SA", "Ceramica Rhône Sàrl"],
-    demandeur: "Architecture Rhône SA",
-  },
-];
 const emptyChForm = () => ({
   titre: "", categorie: "Carrelage", ville: "", adresse: "", typeBien: "Appartement", etage: "", numAppart: "", desc: "",
   metres: metresDefaut("Carrelage"),
   budget: "10 000 – 25 000 CHF", delai: "Dans le mois", limite: "", prive: false, invites: [], photos: [],
   demandeur: "",
 });
-const NOTES_ENTREPRISES = { "MV-3 PRO Sàrl": 4.9, "Carrelage Dubuis Sàrl": 4.8, "Batisol Valais SA": 4.6, "Ceramica Rhône Sàrl": 4.4 };
-const PROMO_ORG = "Architecture Rhône SA";
-const S7_LIGNES = [
-  { code: "111.1", d: "Installation de chantier et protections", u: "forfait", q: 1, pu: 280 },
-  { code: "221.2", d: "Dépose de l'ancien revêtement", u: "m²", q: 7, pu: 105 },
-  { code: "221.4", d: "Évacuation et mise en décharge des gravats", u: "forfait", q: 1, pu: 180 },
-  { code: "228.1", d: "Préparation du support / ragréage", u: "m²", q: 7, pu: 40 },
-  { code: "271.3", d: "Étanchéité (SEP) sol", u: "m²", q: 7, pu: 80 },
-  { code: "271.5", d: "Étanchéité relevés muraux et angles", u: "ml", q: 9, pu: 47 },
-  { code: "241.1", d: "Fourniture et pose carrelage sol", u: "m²", q: 7, pu: 270 },
-  { code: "241.3", d: "Fourniture et pose carrelage mural", u: "m²", q: 20, pu: 210 },
-  { code: "241.6", d: "Pose plinthes", u: "ml", q: 5, pu: 97 },
-  { code: "241.8", d: "Seuils et profilés de finition", u: "ml", q: 2, pu: 150 },
-  { code: "241.9", d: "Joints de dilatation périphériques", u: "ml", q: 6, pu: 80 },
-  { code: "251.4", d: "Douche italienne complète (receveur à carreler)", u: "pce", q: 1, pu: 2450 },
-  { code: "299.0", d: "Nettoyage fin de chantier", u: "forfait", q: 1, pu: 300 },
-];
-const SOUMISSIONS_SEED = [
-  { id: "s1", chantierId: 1, entreprise: "Carrelage Dubuis Sàrl", total: 18450, delaiDebut: "12 août", duree: "8 j", garantie: "5 ans", statut: "En attente", date: "Il y a 2 j" },
-  { id: "s2", chantierId: 1, entreprise: "Batisol Valais SA", total: 17900, delaiDebut: "25 août", duree: "7 j", garantie: "2 ans", statut: "En attente", date: "Il y a 1 j" },
-  { id: "s7", chantierId: 1, entreprise: "MV-3 PRO Sàrl", lignes: S7_LIGNES, total: Math.round(S7_LIGNES.reduce((s, l) => s + l.q * l.pu, 0) * 1.081), delaiDebut: "5 août", duree: "10 j", garantie: "5 ans", statut: "En attente", date: "Il y a 6 h" },
-  { id: "s3", chantierId: 4, entreprise: "Carrelage Dubuis Sàrl", total: 178200, delaiDebut: "sept.", duree: "35 j", garantie: "5 ans", statut: "En attente", date: "Il y a 3 j" },
-  { id: "s4", chantierId: 4, entreprise: "Batisol Valais SA", total: 172550, delaiDebut: "sept.", duree: "32 j", garantie: "2 ans", statut: "En attente", date: "Il y a 4 j" },
-  { id: "s5", chantierId: 4, entreprise: "Ceramica Rhône Sàrl", total: 181900, delaiDebut: "sept.", duree: "34 j", garantie: "2 ans", statut: "Perdue", date: "Il y a 5 j" },
-  { id: "s6", chantierId: 2, entreprise: "MV-3 PRO Sàrl", total: 6120, delaiDebut: "29 juillet", duree: "3 j", garantie: "5 ans", statut: "Gagnée", date: "La semaine dernière" },
-];
-const SUIVIS_SEED = [
-  {
-    id: "suivi-s6", chantierId: 2, soumissionId: "s6", entreprise: "MV-3 PRO Sàrl",
-    jalons: [
-      { id: "acompte", label: "Acompte 30 % reçu", done: true },
-      { id: "debut", label: "Début des travaux", done: true },
-      { id: "cours", label: "Travaux en cours 30 %", done: false },
-      { id: "reception", label: "Réception et solde 10 %", done: false },
-    ],
-    photos: { avant: [], pendant: [], apres: [] }, documents: [], statut: "En cours",
-  },
-];
 /* ---------------- Commission plateforme (facturation entreprises) ---------------- */
 const COMMISSION_RATES = { Starter: 0.10, Pro: 0.07, Premium: 0.04 };
-const FACTURES_SEED = [
-  { id: "f-s6", soumissionId: "s6", chantierId: 2, entreprise: "MV-3 PRO Sàrl", montant: 6120, taux: 0.04, commission: 245, statut: "Payée", date: "La semaine dernière" },
-];
 const ADMIN_QUEUE = [
   { t: "Salle de bains — Savièse", s: "Il y a 12 min · Particulier · Dossier complet", q: "A", go: true },
   { t: "Peinture façade — Martigny", s: "Il y a 1 h · Catégorie à corriger", q: "B" },
@@ -273,7 +187,18 @@ const ADMIN_QUEUE = [
 
 /* ================================================================== */
 export default function App() {
-  const [role, setRole] = useState("client");
+  const [authUser, setAuthUser] = useState(null);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authScreen, setAuthScreen] = useState("login");
+  const [authError, setAuthError] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [authForm, setAuthForm] = useState({
+    role: "client", email: "", password: "", nom: "", entreprise: "", organisation: "", npaCommune: "",
+  });
+  const [prosDisponibles, setProsDisponibles] = useState([]);
+
+  const [role, setRole] = useState(null);
   const [screen, setScreen] = useState("home");
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
@@ -281,19 +206,19 @@ export default function App() {
     sdb: true, depose: true, chauff: false, budget: "10 000 – 25 000 CHF", delai: "Dans le mois",
     visite: "Visite sur place", creneau: "Mardi 14h–17h",
   });
-  const [review, setReview] = useState({ q: 5, prix: 5, delai: 4, com: 5, prop: 5, sav: 5, done: false });
-  const [chantiers, setChantiers] = useState(CHANTIERS_INIT);
-  const [soumissions, setSoumissions] = useState(SOUMISSIONS_SEED);
-  const [suivis, setSuivis] = useState(SUIVIS_SEED);
+  const [review, setReview] = useState({ q: 5, prix: 5, delai: 4, com: 5, prop: 5, sav: 5, commentaire: "", done: false });
+  const [chantiers, setChantiers] = useState([]);
+  const [soumissions, setSoumissions] = useState([]);
+  const [suivis, setSuivis] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [selectedChantierId, setSelectedChantierId] = useState(1);
-  const [pilotChantierId, setPilotChantierId] = useState(1);
+  const [selectedChantierId, setSelectedChantierId] = useState(null);
+  const [pilotChantierId, setPilotChantierId] = useState(null);
   const [suiviId, setSuiviId] = useState(null);
   const [pdfSoumissionId, setPdfSoumissionId] = useState(null);
-  const [factures, setFactures] = useState(FACTURES_SEED);
+  const [factures, setFactures] = useState([]);
   const [pdfFactureId, setPdfFactureId] = useState(null);
-  const [monChantierId, setMonChantierId] = useState(1);
-  const [selectedSoumissionId, setSelectedSoumissionId] = useState("s7");
+  const [monChantierId, setMonChantierId] = useState(null);
+  const [selectedSoumissionId, setSelectedSoumissionId] = useState(null);
   const [chatChantierId, setChatChantierId] = useState(null);
   const [chStep, setChStep] = useState(0);
   const [chForm, setChForm] = useState(emptyChForm());
@@ -327,47 +252,147 @@ export default function App() {
     document.head.appendChild(st);
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      const t = getToken();
+      if (!t) { setAuthChecked(true); return; }
+      try {
+        const { user } = await api.me();
+        await afterLogin(user);
+      } catch {
+        setToken(null);
+      }
+      setAuthChecked(true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const go = s => { setScreen(s); window.scrollTo(0, 0); };
-  const switchRole = r => {
-    setRole(r);
-    go(r === "pro" ? "proHome" : r === "promo" ? "promoHome" : r === "admin" ? "adminHome" : "home");
+  const MY_ENTREPRISE = authUser?.entreprise || authUser?.nom || "";
+  const MY_ORG = authUser?.organisation || authUser?.nom || "";
+
+  /* --- Authentification --- */
+  const refreshAll = async (u) => {
+    const me = u || authUser;
+    if (!me) return;
+    setDataLoading(true);
+    try {
+      let chs = [], soums = [], suivisList = [];
+      if (me.role === "pro") {
+        const [{ chantiers: browseChs }, { soumissions: mySoums }] = await Promise.all([
+          api.listChantiers("browse"), api.listMySoumissions(),
+        ]);
+        soums = mySoums;
+        const knownIds = new Set(browseChs.map(c => c.id));
+        const extraIds = [...new Set(mySoums.map(s => s.chantierId))].filter(id => !knownIds.has(id));
+        const extraChs = await Promise.all(extraIds.map(id => api.getChantier(id).then(r => r.chantier)));
+        chs = [...browseChs, ...extraChs];
+        const wonIds = mySoums.filter(s => s.statut === "Gagnée").map(s => s.chantierId);
+        suivisList = (await Promise.all(wonIds.map(id => api.getSuiviByChantier(id).then(r => r.suivi)))).filter(Boolean);
+      } else {
+        const { chantiers: myChs } = await api.listChantiers();
+        chs = myChs;
+        soums = (await Promise.all(chs.map(c => api.listSoumissions(c.id).then(r => r.soumissions)))).flat();
+        suivisList = (await Promise.all(
+          chs.filter(c => c.statut !== "Ouvert").map(c => api.getSuiviByChantier(c.id).then(r => r.suivi))
+        )).filter(Boolean);
+      }
+      setChantiers(chs);
+      setSoumissions(soums);
+      setSuivis(suivisList);
+      if (me.role === "client" && !monChantierId && chs.length) setMonChantierId(chs[0].id);
+      if (me.role === "pro" || me.role === "admin") {
+        const { factures: facs } = await api.listFactures();
+        setFactures(facs);
+      }
+      if (me.role === "admin" || me.role === "promo") {
+        const { pros } = await api.listPros();
+        setProsDisponibles(pros);
+      }
+      const { notifications: notifs } = await api.listNotifications();
+      setNotifications(notifs);
+    } catch (e) {
+      console.error("refreshAll", e);
+    }
+    setDataLoading(false);
   };
+
+  const afterLogin = async (u) => {
+    setAuthUser(u);
+    setRole(u.role);
+    if (u.role === "pro" && u.plan) setPlan(u.plan);
+    await refreshAll(u);
+    go(u.role === "pro" ? "proHome" : u.role === "promo" ? "promoHome" : u.role === "admin" ? "adminHome" : "home");
+  };
+  const doLogin = async (email, password) => {
+    setAuthError(""); setAuthBusy(true);
+    try {
+      const { token, user } = await api.login({ email, password });
+      setToken(token);
+      await afterLogin(user);
+    } catch (e) {
+      setAuthError(e.message);
+    }
+    setAuthBusy(false);
+  };
+  const doRegister = async (payload) => {
+    setAuthError(""); setAuthBusy(true);
+    try {
+      const { token, user } = await api.register(payload);
+      setToken(token);
+      await afterLogin(user);
+    } catch (e) {
+      setAuthError(e.message);
+    }
+    setAuthBusy(false);
+  };
+  const doLogout = async () => {
+    try { await api.logout(); } catch { /* déjà expiré, tant pis */ }
+    setToken(null);
+    setAuthUser(null);
+    setRole(null);
+    setChantiers([]); setSoumissions([]); setSuivis([]); setFactures([]); setNotifications([]);
+    setMonChantierId(null);
+    go("home");
+  };
+
   /* --- Marketplace : publication de chantiers et soumissions structurées --- */
-  const notify = (role, titre, texte, color) => setNotifications(n => [{ id: "n" + Date.now() + Math.random(), role, titre, texte, color, date: "À l'instant" }, ...n]);
+  const uploadFile = async file => {
+    const { url, name } = await api.upload(file);
+    return { url, name };
+  };
   const setMetre = (k, v) => setChForm(f => ({ ...f, metres: { ...f.metres, [k]: Math.max(0, v) } }));
   const setChCategorie = cat => setChForm(f => ({ ...f, categorie: cat, metres: metresDefaut(cat) }));
   const toggleInvite = nom => setChForm(f => ({ ...f, invites: f.invites.includes(nom) ? f.invites.filter(x => x !== nom) : [...f.invites, nom] }));
-  const addChPhotos = files => {
-    const items = Array.from(files).map(f => ({ url: URL.createObjectURL(f), name: f.name }));
-    setChForm(f => ({ ...f, photos: [...f.photos, ...items] }));
+  const addChPhotos = async files => {
+    const uploaded = await Promise.all(Array.from(files).map(uploadFile));
+    setChForm(f => ({ ...f, photos: [...f.photos, ...uploaded] }));
   };
   const removeChPhoto = i => setChForm(f => ({ ...f, photos: f.photos.filter((_, j) => j !== i) }));
-  const publishChantier = () => {
-    const id = Math.max(0, ...chantiers.map(c => c.id)) + 1;
-    setChantiers([{ ...chForm, demandeur: chForm.demandeur.trim(), id, statut: "Ouvert", neuf: true, match: 90, tags: [chForm.categorie] }, ...chantiers]);
-    notify("pro", "Nouveau chantier publié", `${chForm.titre || chForm.categorie} — ${chForm.ville || "lieu à confirmer"}`, T.red);
+  const publishChantier = async () => {
+    await api.createChantier({ ...chForm, demandeur: chForm.demandeur.trim() });
     setChStep(0);
     setChForm(emptyChForm());
+    await refreshAll();
     go("chantierPublished");
   };
-  const publishClientDemande = () => {
-    const id = Math.max(0, ...chantiers.map(c => c.id)) + 1;
-    const nouveau = {
-      id, titre: `${form.type} — ${form.bien}`, categorie: "Carrelage", ville: form.npa, adresse: "",
-      typeBien: form.bien, etage: "", numAppart: "", dist: null,
+  const publishClientDemande = async () => {
+    const payload = {
+      titre: `${form.type} — ${form.bien}`, categorie: "Carrelage", ville: form.npa, adresse: "",
+      typeBien: form.bien, etage: "", numAppart: "",
       desc: [form.type, form.sdb && "Douche italienne à créer", form.depose && "Dépose de l'ancien revêtement", form.chauff && "Chauffage au sol"].filter(Boolean).join(" · "),
       metres: { surfSol: form.surfSol, surfMur: form.surfMur, mlEtanch: 0, mlPlinthes: 0, mlSeuils: 0, mlJoints: 0, nbDouches: form.sdb ? 1 : 0 },
-      budget: form.budget, delai: form.delai, limite: "", statut: "Ouvert", prive: false, invites: [], photos: [], demandeur: "",
-      neuf: true, match: 90, tags: [form.type],
+      budget: form.budget, delai: form.delai, limite: "", prive: false, invites: [], photos: [],
+      tags: [form.type],
     };
-    setChantiers(cs => [nouveau, ...cs]);
-    setMonChantierId(id);
-    notify("pro", "Nouvelle demande particulier", `${nouveau.titre} — ${form.npa}`, T.red);
+    const { chantier } = await api.createChantier(payload);
+    setMonChantierId(chantier.id);
+    await refreshAll();
     go("published");
   };
   const startPromoProject = () => {
-    setChForm({ ...emptyChForm(), demandeur: PROMO_ORG });
+    setChForm({ ...emptyChForm(), demandeur: MY_ORG });
     setChStep(0);
     go("adminPublish");
   };
@@ -380,64 +405,55 @@ export default function App() {
   };
   const updateBidLine = (i, field, value) => setBidLines(ls => ls.map((l, j) => j === i ? { ...l, [field]: Math.max(0, Number(value) || 0) } : l));
   const bidTotal = bidLines.reduce((s, l) => s + l.q * l.pu, 0);
-  const submitBid = () => {
-    const ch = chantiers.find(c => c.id === selectedChantierId);
-    setSoumissions(s => [{
-      id: "s" + Date.now(), chantierId: selectedChantierId, entreprise: "MV-3 PRO Sàrl",
-      lignes: bidLines, total: Math.round(bidTotal * 1.081), delaiDebut: bidMeta.delaiDebut || "À convenir",
-      duree: bidMeta.duree || "—", garantie: bidMeta.garantie, remarques: bidMeta.remarques, statut: "En attente", date: "À l'instant",
-    }, ...s]);
-    notify("admin", "Nouvelle soumission reçue", `MV-3 PRO Sàrl — ${ch ? ch.titre : "chantier"} · ${Math.round(bidTotal * 1.081).toLocaleString("fr-CH")} CHF`, T.red);
+  const submitBid = async () => {
+    await api.createSoumission({
+      chantierId: selectedChantierId, lignes: bidLines,
+      delaiDebut: bidMeta.delaiDebut, duree: bidMeta.duree, garantie: bidMeta.garantie, remarques: bidMeta.remarques,
+    });
+    await refreshAll();
     go("proSent");
   };
-  const adjuger = (chantierId, soumissionId) => {
-    const ch = chantiers.find(c => c.id === chantierId);
-    setSoumissions(s => {
-      const updated = s.map(x => x.chantierId !== chantierId ? x : { ...x, statut: x.id === soumissionId ? "Gagnée" : "Perdue" });
-      const gagnante = updated.find(x => x.id === soumissionId);
-      if (gagnante) {
-        setSuivis(sv => sv.some(x => x.soumissionId === soumissionId) ? sv : [{
-          id: "suivi-" + soumissionId, chantierId, soumissionId, entreprise: gagnante.entreprise,
-          jalons: JALONS_DEFAULT(), photos: { avant: [], pendant: [], apres: [] }, documents: [], statut: "En cours",
-        }, ...sv]);
-        const taux = gagnante.entreprise === "MV-3 PRO Sàrl" ? (COMMISSION_RATES[plan] || COMMISSION_RATES.Premium) : COMMISSION_RATES.Pro;
-        const commission = Math.round(gagnante.total * taux);
-        setFactures(f => f.some(x => x.soumissionId === soumissionId) ? f : [{
-          id: "f" + Date.now(), soumissionId, chantierId, entreprise: gagnante.entreprise,
-          montant: gagnante.total, taux, commission, statut: "Due", date: "À l'instant",
-        }, ...f]);
-        if (gagnante.entreprise === "MV-3 PRO Sàrl") {
-          notify("pro", "Chantier gagné 🎉", `${ch ? ch.titre : "Chantier"} — contrat attribué`, T.green);
-          notify("pro", "Facture de commission émise", `${Math.round(taux * 100)} % sur ${gagnante.total.toLocaleString("fr-CH")} CHF — ${commission.toLocaleString("fr-CH")} CHF dus à MV3 Connect`, T.amber);
-        }
-      }
-      updated.filter(x => x.chantierId === chantierId && x.id !== soumissionId && x.entreprise === "MV-3 PRO Sàrl")
-        .forEach(() => notify("pro", "Soumission non retenue", `${ch ? ch.titre : "Chantier"} — une autre entreprise a été choisie`, T.sub));
-      return updated;
-    });
-    setChantiers(cs => cs.map(c => c.id === chantierId ? { ...c, statut: "Attribué" } : c));
+  const adjuger = async (chantierId, soumissionId) => {
+    await api.adjuger(soumissionId);
+    await refreshAll();
+    const { suivi } = await api.getSuiviByChantier(chantierId);
+    return suivi;
   };
-  const payerFacture = id => setFactures(f => f.map(x => x.id !== id ? x : { ...x, statut: "Payée" }));
+  const payerFacture = async id => {
+    await api.payFacture(id);
+    await refreshAll();
+  };
   const viewFacturePdf = id => { setPdfFactureId(id); go("facturePdf"); };
-  const toggleJalon = (sid, jid) => setSuivis(sv => sv.map(s => s.id !== sid ? s : {
-    ...s, jalons: s.jalons.map(j => j.id === jid ? { ...j, done: !j.done } : j),
-  }));
-  const addSuiviPhoto = (sid, cat, files) => {
-    const items = Array.from(files).map(f => ({ url: URL.createObjectURL(f), name: f.name }));
-    setSuivis(sv => sv.map(s => s.id !== sid ? s : { ...s, photos: { ...s.photos, [cat]: [...s.photos[cat], ...items] } }));
+  const toggleJalon = async (sid, jid) => {
+    await api.toggleJalon(sid, jid);
+    await refreshAll();
   };
-  const removeSuiviPhoto = (sid, cat, i) => setSuivis(sv => sv.map(s => s.id !== sid ? s : { ...s, photos: { ...s.photos, [cat]: s.photos[cat].filter((_, j) => j !== i) } }));
-  const finirChantier = sid => {
-    setSuivis(sv => sv.map(s => s.id !== sid ? s : { ...s, statut: "Terminé", jalons: s.jalons.map(j => ({ ...j, done: true })) }));
+  const addSuiviPhoto = async (sid, cat, files) => {
+    const uploaded = await Promise.all(Array.from(files).map(uploadFile));
+    for (const p of uploaded) await api.addSuiviPhoto(sid, cat, p.url, p.name);
+    await refreshAll();
+  };
+  const removeSuiviPhoto = async (sid, cat, i) => {
     const suivi = suivis.find(s => s.id === sid);
-    if (suivi) setChantiers(cs => cs.map(c => c.id === suivi.chantierId ? { ...c, statut: "Terminé" } : c));
+    const photo = suivi?.photos?.[cat]?.[i];
+    if (!photo) return;
+    await api.removeSuiviPhoto(sid, photo.url);
+    await refreshAll();
   };
-  const addSuiviDoc = (sid, jalonId, file) => {
+  const finirChantier = async sid => {
+    await api.finishSuivi(sid);
+    await refreshAll();
+  };
+  const addSuiviDoc = async (sid, jalonId, file) => {
     if (!file) return;
-    const doc = { id: "doc" + Date.now(), jalonId, name: file.name, url: URL.createObjectURL(file), date: "À l'instant" };
-    setSuivis(sv => sv.map(s => s.id !== sid ? s : { ...s, documents: [...(s.documents || []), doc] }));
+    const { url, name } = await uploadFile(file);
+    await api.addSuiviDocument(sid, jalonId, url, name);
+    await refreshAll();
   };
-  const removeSuiviDoc = (sid, docId) => setSuivis(sv => sv.map(s => s.id !== sid ? s : { ...s, documents: s.documents.filter(d => d.id !== docId) }));
+  const removeSuiviDoc = async (sid, docId) => {
+    await api.removeSuiviDocument(docId);
+    await refreshAll();
+  };
   const viewPdf = soumissionId => { setPdfSoumissionId(soumissionId); go("bordereauPdf"); };
 
   /* --- Analyse IA réelle (API Anthropic) --- */
@@ -472,6 +488,91 @@ export default function App() {
     setStep(8); go("form");
   };
 
+  /* ---------------- Authentification ---------------- */
+  const AuthScreen = () => {
+    const isRegister = authScreen === "register";
+    const af = k => e => setAuthForm(f => ({ ...f, [k]: e.target.value }));
+    const submit = e => {
+      e.preventDefault();
+      if (isRegister) {
+        doRegister({
+          role: authForm.role, email: authForm.email, password: authForm.password, nom: authForm.nom,
+          entreprise: authForm.entreprise, organisation: authForm.organisation, npaCommune: authForm.npaCommune,
+        });
+      } else {
+        doLogin(authForm.email, authForm.password);
+      }
+    };
+    return (
+      <div style={{ minHeight: "100vh", background: T.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <div style={{ width: "100%", maxWidth: 380 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 22 }}>
+            <div style={{ width: 26, height: 26, background: T.red, borderRadius: 5, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, padding: 4 }}>
+              {[0, 1, 2, 3].map(i => <div key={i} style={{ background: "#fff", borderRadius: 1 }} />)}
+            </div>
+            <span style={{ fontFamily: FONT, fontWeight: 900, fontSize: 19, letterSpacing: "-0.02em" }}>MV3 CONNECT</span>
+          </div>
+          <Card style={{ padding: 22 }}>
+            <div style={{ display: "flex", background: T.soft, borderRadius: 10, padding: 3, marginBottom: 18 }}>
+              {[["login", "Se connecter"], ["register", "Créer un compte"]].map(([k, l]) => (
+                <button key={k} onClick={() => { setAuthScreen(k); setAuthError(""); }} style={{
+                  flex: 1, fontFamily: FONT, fontWeight: 700, fontSize: 13, padding: "9px 4px", borderRadius: 8,
+                  border: "none", cursor: "pointer", background: authScreen === k ? T.white : "transparent",
+                  color: authScreen === k ? T.red : T.sub, boxShadow: authScreen === k ? "0 1px 3px rgba(0,0,0,.08)" : "none",
+                }}>{l}</button>
+              ))}
+            </div>
+            <form onSubmit={submit} style={{ display: "grid", gap: 10 }}>
+              {isRegister && <>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6 }}>
+                  {[["client", "Client"], ["pro", "Sous-traitant"], ["promo", "Promoteur"]].map(([r, l]) => (
+                    <button type="button" key={r} onClick={() => setAuthForm(f => ({ ...f, role: r }))} style={{
+                      fontFamily: FONT, fontWeight: 700, fontSize: 11.5, padding: "9px 4px", borderRadius: 8,
+                      border: authForm.role === r ? `2px solid ${T.red}` : `1px solid ${T.line}`,
+                      background: authForm.role === r ? T.redBg : T.white, color: T.ink, cursor: "pointer",
+                    }}>{l}</button>
+                  ))}
+                </div>
+                <input required placeholder="Nom complet" value={authForm.nom} onChange={af("nom")}
+                  style={{ fontFamily: FONT, fontSize: 14, padding: "12px 14px", borderRadius: 10, border: `1px solid ${T.line}`, outline: "none" }} />
+                {authForm.role === "pro" && (
+                  <input placeholder="Raison sociale de l'entreprise" value={authForm.entreprise} onChange={af("entreprise")}
+                    style={{ fontFamily: FONT, fontSize: 14, padding: "12px 14px", borderRadius: 10, border: `1px solid ${T.line}`, outline: "none" }} />
+                )}
+                {authForm.role === "promo" && (
+                  <input placeholder="Organisation (bureau, régie…)" value={authForm.organisation} onChange={af("organisation")}
+                    style={{ fontFamily: FONT, fontSize: 14, padding: "12px 14px", borderRadius: 10, border: `1px solid ${T.line}`, outline: "none" }} />
+                )}
+                {authForm.role === "client" && (
+                  <input placeholder="NPA et commune" value={authForm.npaCommune} onChange={af("npaCommune")}
+                    style={{ fontFamily: FONT, fontSize: 14, padding: "12px 14px", borderRadius: 10, border: `1px solid ${T.line}`, outline: "none" }} />
+                )}
+              </>}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, border: `1px solid ${T.line}`, borderRadius: 10, padding: "0 12px" }}>
+                <Mail size={15} color={T.sub} />
+                <input required type="email" placeholder="E-mail" value={authForm.email} onChange={af("email")} autoComplete="username"
+                  style={{ flex: 1, fontFamily: FONT, fontSize: 14, padding: "12px 0", border: "none", outline: "none", background: "transparent" }} />
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, border: `1px solid ${T.line}`, borderRadius: 10, padding: "0 12px" }}>
+                <Lock size={15} color={T.sub} />
+                <input required type="password" placeholder="Mot de passe" value={authForm.password} onChange={af("password")}
+                  autoComplete={isRegister ? "new-password" : "current-password"} minLength={isRegister ? 8 : undefined}
+                  style={{ flex: 1, fontFamily: FONT, fontSize: 14, padding: "12px 0", border: "none", outline: "none", background: "transparent" }} />
+              </div>
+              {authError && <div style={{ ...S.sub, color: T.red, fontWeight: 700, fontSize: 12.5 }}>{authError}</div>}
+              <Btn disabled={authBusy} style={{ marginTop: 4 }}>
+                {authBusy ? <Loader2 size={17} style={{ animation: "spin 1s linear infinite" }} /> : (isRegister ? "Créer mon compte" : "Se connecter")}
+              </Btn>
+            </form>
+          </Card>
+          <div style={{ ...S.sub, fontSize: 11.5, textAlign: "center", marginTop: 14 }}>
+            Les comptes administrateur sont créés directement par l'équipe MV3 Connect.
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   /* ---------------- Header ---------------- */
   const Header = () => (
     <div style={{ position: "sticky", top: 0, zIndex: 20, background: T.bg, borderBottom: `1px solid ${T.line}`, padding: "12px 14px 10px" }}>
@@ -485,15 +586,15 @@ export default function App() {
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <button onClick={() => go("notifs")} style={{ position: "relative", background: T.white, border: `1px solid ${T.line}`, borderRadius: 9, padding: 7, cursor: "pointer", display: "flex" }}>
             <Bell size={15} color={T.ink} />
-            <span style={{ position: "absolute", top: 4, right: 4, width: 7, height: 7, borderRadius: "50%", background: T.red }} />
+            {notifications.some(n => !n.lu) && <span style={{ position: "absolute", top: 4, right: 4, width: 7, height: 7, borderRadius: "50%", background: T.red }} />}
           </button>
-          <div style={{ display: "flex", background: T.soft, borderRadius: 9, padding: 3 }}>
-            {[["client", "Client"], ["pro", "Pro"], ["promo", "Promo"], ["admin", "Admin"]].map(([r, l]) => (
-              <button key={r} onClick={() => switchRole(r)} style={{
-                fontFamily: FONT, fontWeight: 700, fontSize: 10.5, padding: "6px 8px", borderRadius: 7,
-                border: "none", cursor: "pointer", background: role === r ? T.ink : "transparent", color: role === r ? "#fff" : T.sub
-              }}>{l}</button>
-            ))}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: T.soft, borderRadius: 9, padding: "5px 6px 5px 10px" }}>
+            <span style={{ fontFamily: FONT, fontWeight: 700, fontSize: 11.5, color: T.ink, maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {authUser?.entreprise || authUser?.organisation || authUser?.nom}
+            </span>
+            <button onClick={doLogout} title="Se déconnecter" style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 7, padding: 5, cursor: "pointer", display: "flex" }}>
+              <LogOut size={13} color={T.sub} />
+            </button>
           </div>
         </div>
       </div>
@@ -772,7 +873,7 @@ export default function App() {
   const RequestScreen = () => {
     const ch = chantiers.find(c => c.id === monChantierId);
     const offres = ch ? soumissions.filter(s => s.chantierId === ch.id) : [];
-    const meilleureNote = offres.length ? Math.max(...offres.map(o => NOTES_ENTREPRISES[o.entreprise] || 0)) : 0;
+    const meilleureNote = offres.length ? Math.max(...offres.map(o => o.note || 0)) : 0;
     return (
       <div style={{ padding: 16 }}>
         <Back onClick={() => go("requests")} label="Mes chantiers" />
@@ -785,7 +886,7 @@ export default function App() {
               <thead><tr>
                 <th></th>
                 {offres.map(o => {
-                  const note = NOTES_ENTREPRISES[o.entreprise] || 0;
+                  const note = o.note || 0;
                   const best = note === meilleureNote;
                   return (
                     <th key={o.id} style={{ padding: "8px 6px", background: best ? T.redBg : "transparent", borderRadius: "10px 10px 0 0" }}>
@@ -801,7 +902,7 @@ export default function App() {
                 {[["Prix total", o => <b style={{ fontSize: 13.5 }}>{o.total.toLocaleString("fr-CH")}</b>], ["Début", o => o.delaiDebut], ["Durée", o => o.duree], ["Garantie", o => o.garantie], ["Vérifiée", () => <Check size={15} color={T.green} strokeWidth={3} />]].map(([lbl, fn]) => (
                   <tr key={lbl}>
                     <td style={{ padding: "9px 6px", color: T.sub, fontWeight: 700, borderTop: `1px solid ${T.line}` }}>{lbl}</td>
-                    {offres.map(o => <td key={o.id} style={{ padding: "9px 6px", textAlign: "center", borderTop: `1px solid ${T.line}`, background: (NOTES_ENTREPRISES[o.entreprise] || 0) === meilleureNote ? T.redBg : "transparent" }}>{fn(o)}</td>)}
+                    {offres.map(o => <td key={o.id} style={{ padding: "9px 6px", textAlign: "center", borderTop: `1px solid ${T.line}`, background: (o.note || 0) === meilleureNote ? T.redBg : "transparent" }}>{fn(o)}</td>)}
                   </tr>
                 ))}
               </tbody>
@@ -809,11 +910,11 @@ export default function App() {
           </div>
           <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
             {offres.map(o => (
-              <Card key={o.id} style={(NOTES_ENTREPRISES[o.entreprise] || 0) === meilleureNote ? { border: `2px solid ${T.red}` } : {}}>
+              <Card key={o.id} style={(o.note || 0) === meilleureNote ? { border: `2px solid ${T.red}` } : {}}>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <div>
                     <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 15 }}>{o.entreprise}</div>
-                    <div style={S.sub}>{NOTES_ENTREPRISES[o.entreprise] || "—"} ★ · entreprise vérifiée</div>
+                    <div style={S.sub}>{o.note || "—"} ★ · entreprise vérifiée</div>
                   </div>
                   <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 16 }}>{o.total.toLocaleString("fr-CH")}<span style={{ fontSize: 11, color: T.sub }}> CHF</span></div>
                 </div>
@@ -838,7 +939,7 @@ export default function App() {
         <div style={S.sub}>Devis introuvable.</div>
       </div>
     );
-    const note = NOTES_ENTREPRISES[s.entreprise];
+    const note = s.note;
     const lignes = s.lignes && s.lignes.length ? s.lignes : [{ code: "—", d: "Prestation forfaitaire", u: "forfait", q: 1, pu: Math.round(s.total / 1.081) }];
     return (
       <div style={{ padding: 16 }}>
@@ -925,8 +1026,12 @@ export default function App() {
           <Stars v={review[k]} set={v => setReview(r => ({ ...r, [k]: v }))} size={19} />
         </Card>
       ))}
-      <textarea placeholder="Racontez votre expérience (facultatif)…" style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT, fontSize: 14, padding: 13, borderRadius: 12, border: `1px solid ${T.line}`, background: T.white, minHeight: 80, resize: "none", outline: "none", marginBottom: 12 }} />
-      <Btn disabled={review.done} onClick={() => setReview(r => ({ ...r, done: true }))}>
+      <textarea placeholder="Racontez votre expérience (facultatif)…" value={review.commentaire} onChange={e => setReview(r => ({ ...r, commentaire: e.target.value }))}
+        style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT, fontSize: 14, padding: 13, borderRadius: 12, border: `1px solid ${T.line}`, background: T.white, minHeight: 80, resize: "none", outline: "none", marginBottom: 12 }} />
+      <Btn disabled={review.done || !suivi} onClick={async () => {
+        await api.createReview({ suiviId: suivi.id, q: review.q, prix: review.prix, delai: review.delai, com: review.com, prop: review.prop, sav: review.sav, commentaire: review.commentaire });
+        setReview(r => ({ ...r, done: true }));
+      }}>
         {review.done ? "✓ Avis publié — merci !" : "Publier mon avis"}
       </Btn>
     </div>
@@ -990,7 +1095,7 @@ export default function App() {
         ))}
       </div>
       <div style={{ display: "grid", gap: 10 }}>
-        {chantiers.filter(c => c.statut === "Ouvert" && (!c.prive || (c.invites || []).includes("MV-3 PRO Sàrl"))).map(o => {
+        {chantiers.filter(c => c.statut === "Ouvert").map(o => {
           const nbSoum = soumissions.filter(s => s.chantierId === o.id).length;
           return (
             <Card key={o.id} onClick={() => { setSelectedChantierId(o.id); go("proOpp"); }} style={o.prive ? { borderLeft: `4px solid ${T.ink}` } : {}}>
@@ -1115,7 +1220,7 @@ export default function App() {
 
   /* ================= PRO — SOUMISSIONS ================= */
   const ProSentScreen = () => {
-    const mine = soumissions.filter(s => s.entreprise === "MV-3 PRO Sàrl");
+    const mine = soumissions;
     const statusStyle = st => st === "Gagnée" ? [T.green, T.greenBg] : st === "Perdue" ? [T.sub, T.soft] : [T.amber, T.amberBg];
     return (
       <div style={{ padding: 16 }}>
@@ -1178,7 +1283,7 @@ export default function App() {
   const ProStatsScreen = () => {
     const months = [["Mars", 34], ["Avril", 52], ["Mai", 41], ["Juin", 68], ["Juil.", 47]];
     const max = 68;
-    const mesFactures = factures.filter(f => f.entreprise === "MV-3 PRO Sàrl");
+    const mesFactures = factures;
     const totalDu = mesFactures.filter(f => f.statut === "Due").reduce((s, f) => s + f.commission, 0);
     return (
       <div style={{ padding: 16 }}>
@@ -1257,14 +1362,14 @@ export default function App() {
 
   /* ================= PROMOTEUR ================= */
   const PromoHomeScreen = () => {
-    const mesChantiers = chantiers.filter(c => c.demandeur === PROMO_ORG);
+    const mesChantiers = chantiers;
     const actifs = mesChantiers.filter(c => c.statut !== "Terminé");
     const termines = mesChantiers.filter(c => c.statut === "Terminé");
     const totalSoum = mesChantiers.reduce((s, c) => s + soumissions.filter(x => x.chantierId === c.id).length, 0);
     return (
     <div style={{ padding: 16 }}>
       <h1 style={{ ...S.h1, margin: "10px 0 4px" }}>Mes projets</h1>
-      <p style={{ ...S.sub, margin: "0 0 14px" }}>Chantiers publiés pour {PROMO_ORG} — comparez les soumissions et adjugez.</p>
+      <p style={{ ...S.sub, margin: "0 0 14px" }}>Chantiers publiés pour {MY_ORG} — comparez les soumissions et adjugez.</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
         <KPI n={actifs.length} l="projets actifs" c={T.red} /><KPI n={totalSoum} l="soumissions reçues" />
       </div>
@@ -1470,13 +1575,14 @@ export default function App() {
           {chForm.prive && <>
             <div style={{ ...S.label, margin: "18px 0 8px" }}>Entreprises invitées</div>
             <div style={{ display: "grid", gap: 8 }}>
-              {ENTREPRISES_DISPO.map(e => {
-                const on = chForm.invites.includes(e.nom);
+              {prosDisponibles.length === 0 && <div style={S.sub}>Aucune entreprise inscrite pour l'instant.</div>}
+              {prosDisponibles.map(e => {
+                const on = chForm.invites.includes(e.id);
                 return (
-                  <Card key={e.nom} onClick={() => toggleInvite(e.nom)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", ...(on ? { border: `2px solid ${T.red}` } : {}) }}>
+                  <Card key={e.id} onClick={() => toggleInvite(e.id)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", ...(on ? { border: `2px solid ${T.red}` } : {}) }}>
                     <div>
                       <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14 }}>{e.nom}</div>
-                      <div style={{ ...S.sub, fontSize: 12.5 }}>{e.note} ★ · {e.zone}</div>
+                      {e.note && <div style={{ ...S.sub, fontSize: 12.5 }}>{e.note} ★</div>}
                     </div>
                     <div style={{ width: 24, height: 24, borderRadius: 7, border: on ? "none" : `2px solid ${T.line}`, background: on ? T.red : T.white, display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {on && <Check size={15} color="#fff" strokeWidth={3} />}
@@ -1500,7 +1606,7 @@ export default function App() {
           }).filter(Boolean).join(" · ") || "—"],
           ["Budget", chForm.budget], ["Délai", chForm.delai], ["Limite de soumission", chForm.limite || "—"],
           ["Visibilité", chForm.prive ? "Invitation privée" : "Ouvert (max 4 soumissions)"],
-          ...(chForm.prive ? [["Entreprises invitées", chForm.invites.length ? chForm.invites.join(" · ") : "Aucune sélectionnée"]] : [])].map(([k, v]) => (
+          ...(chForm.prive ? [["Entreprises invitées", chForm.invites.length ? chForm.invites.map(id => prosDisponibles.find(e => e.id === id)?.nom || id).join(" · ") : "Aucune sélectionnée"]] : [])].map(([k, v]) => (
             <Card key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px" }}>
               <span style={{ ...S.sub, fontWeight: 700 }}>{k}</span>
               <span style={{ ...S.body, fontWeight: 700, textAlign: "right", maxWidth: "60%" }}>{v}</span>
@@ -1550,7 +1656,7 @@ export default function App() {
         return min > 0 ? ((s.total - min) / min) * 100 : 0;
       });
       const ecartMoy = ecarts.length ? ecarts.reduce((a, b) => a + b, 0) / ecarts.length : 0;
-      return { ent, nb: mine.length, gagnees, taux: decidees ? Math.round((gagnees / decidees) * 100) : null, ecartMoy, note: NOTES_ENTREPRISES[ent] || 4.5 };
+      return { ent, nb: mine.length, gagnees, taux: decidees ? Math.round((gagnees / decidees) * 100) : null, ecartMoy, note: mine[0]?.note || null };
     }).sort((a, b) => b.gagnees - a.gagnees);
 
     return (
@@ -1593,7 +1699,7 @@ export default function App() {
               {stats.map(s => (
                 <tr key={s.ent}>
                   <td style={{ padding: "9px 6px", fontWeight: 700, borderTop: `1px solid ${T.line}` }}>{s.ent}</td>
-                  <td style={{ padding: "9px 6px", textAlign: "center", borderTop: `1px solid ${T.line}` }}>{s.note} ★</td>
+                  <td style={{ padding: "9px 6px", textAlign: "center", borderTop: `1px solid ${T.line}` }}>{s.note ? `${s.note} ★` : "—"}</td>
                   <td style={{ padding: "9px 6px", textAlign: "center", borderTop: `1px solid ${T.line}` }}>{s.nb}</td>
                   <td style={{ padding: "9px 6px", textAlign: "center", borderTop: `1px solid ${T.line}`, fontWeight: 700, color: s.taux === null ? T.sub : s.taux >= 50 ? T.green : T.amber }}>{s.taux === null ? "—" : s.taux + " %"}</td>
                   <td style={{ padding: "9px 6px", textAlign: "center", borderTop: `1px solid ${T.line}`, color: s.ecartMoy <= 0 ? T.green : T.ink }}>{s.ecartMoy > 0 ? "+" : ""}{s.ecartMoy.toFixed(1)} %</td>
@@ -1809,7 +1915,7 @@ export default function App() {
     const totalTTC = s.lignes ? Math.round(sousTotal * 1.081) : s.total;
     const ref = "MV3-" + String(s.id).replace(/[^0-9]/g, "").slice(-6).padStart(6, "0");
     const dateEmission = new Date().toLocaleDateString("fr-CH", { day: "2-digit", month: "long", year: "numeric" });
-    const note = NOTES_ENTREPRISES[s.entreprise];
+    const note = s.note;
     const colWidths = ["10%", "40%", "10%", "12%", "13%", "15%"];
     return (
       <div>
@@ -2072,14 +2178,14 @@ export default function App() {
   /* ================= PROFILE ================= */
   const ProfileScreen = () => {
     const data = {
-      client: [["Nom", "Client démo"], ["Commune", "Savièse (VS)"], ["Langue", "Français"], ["Notifications", "Push + e-mail"], ["Mes documents", "2 contrats signés"]],
-      pro: [["Note", "4.9 / 5 · 214 chantiers"], ["Zones", "Valais central · 25 km"], ["Catalogue", "Sync Dolibarr ✓"], ["Documents", "RC ✓ · AVS ✓ · Assurance ✓"], ["Abonnement", "Premium · commission 4 %"], ["Équipe", "4 utilisateurs"]],
-      promo: [["Organisation", PROMO_ORG], ["Projets actifs", String(chantiers.filter(c => c.demandeur === PROMO_ORG && c.statut !== "Terminé").length)], ["Équipe", "2 architectes + 1 DT"], ["Modèles", "Séries de prix CAN"]],
-      admin: [["Rôle", "Super-admin"], ["Entreprises actives", "142 vérifiées"], ["Demandes / mois", "380"], ["Journal d'audit", "Toutes les actions tracées"]],
+      client: [["Nom", authUser?.nom || "—"], ["Commune", authUser?.npaCommune || "—"], ["Langue", "Français"], ["Notifications", "Push + e-mail"], ["E-mail", authUser?.email || "—"]],
+      pro: [["Note", authUser?.note ? `${authUser.note} / 5` : "Pas encore noté"], ["Catalogue", "Sync Dolibarr ✓"], ["Documents", "RC ✓ · AVS ✓ · Assurance ✓"], ["Abonnement", `${plan} · commission ${Math.round(COMMISSION_RATES[plan] * 100)} %`], ["E-mail", authUser?.email || "—"]],
+      promo: [["Organisation", MY_ORG], ["Projets actifs", String(chantiers.filter(c => c.statut !== "Terminé").length)], ["E-mail", authUser?.email || "—"], ["Modèles", "Séries de prix CAN"]],
+      admin: [["Rôle", "Super-admin"], ["Nom", authUser?.nom || "—"], ["E-mail", authUser?.email || "—"], ["Journal d'audit", "Toutes les actions tracées"]],
     };
     return (
       <div style={{ padding: 16 }}>
-        <h1 style={{ ...S.h1, margin: "10px 0 16px" }}>{role === "pro" ? "MV-3 PRO Sàrl" : role === "promo" ? "Architecture Rhône SA" : role === "admin" ? "Administration" : "Mon profil"}</h1>
+        <h1 style={{ ...S.h1, margin: "10px 0 16px" }}>{role === "pro" ? MY_ENTREPRISE : role === "promo" ? MY_ORG : role === "admin" ? "Administration" : "Mon profil"}</h1>
         {role === "pro" && (
           <Card style={{ marginBottom: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -2160,10 +2266,10 @@ export default function App() {
   const PayScreen = () => {
     const s = soumissions.find(x => x.id === selectedSoumissionId);
     const acompte = s ? Math.round(s.total * 0.3) : 0;
-    const accepterEtPayer = () => {
+    const accepterEtPayer = async () => {
       if (!s) return;
-      adjuger(s.chantierId, s.id);
-      setSuiviId("suivi-" + s.id);
+      const suivi = await adjuger(s.chantierId, s.id);
+      if (suivi) setSuiviId(suivi.id);
       go("suivi");
     };
     return (
@@ -2204,40 +2310,22 @@ export default function App() {
   };
 
   /* ================= NOTIFICATIONS ================= */
-  const NotifsScreen = () => {
-    const N = {
-      client: [["À l'instant", "Nouvelle offre reçue", "MV-3 PRO Sàrl a soumis une offre — 20'200 CHF", T.red],
-      ["Il y a 2 h", "Visite confirmée", "Carrelage Dubuis · mardi 21 juillet à 14h30", T.green],
-      ["Hier", "Question d'une entreprise", "Batisol Valais : « Le receveur de douche est-il déjà choisi ? »", T.amber],
-      ["Lun.", "Demande validée", "Votre demande a été transmise à 3 entreprises compatibles", T.green]],
-      pro: [["À l'instant", "Nouvelle opportunité 96 %", "Salle de bains complète à Savièse — 6 km de votre dépôt", T.red],
-      ["Il y a 1 h", "Offre consultée", "Villa Vétroz : le client a ouvert votre devis (2×)", T.amber],
-      ["Hier", "Invitation privée", "Résidence Les Alpes — Lot 03 Carrelage · délai 10 juillet", T.ink],
-      ["Lun.", "Chantier gagné 🎉", "Terrasse Grimisuat — 8'750 CHF · contrat signé", T.green]],
-      promo: [["Il y a 3 h", "3ᵉ soumission reçue", "Lot 03 Carrelage — comparaison des séries de prix disponible", T.red],
-      ["Hier", "Délai lot 02 demain", "Chape : 3 offres reçues sur 4 entreprises invitées", T.amber]],
-      admin: [["À l'instant", "5 demandes à vérifier", "Dont 1 qualité A prête à publier", T.red],
-      ["Il y a 1 h", "Document expiré", "Assurance RC — Batisol Valais SA · suspension dans 5 jours", T.amber],
-      ["Hier", "Litige ouvert", "Chantier #1847 — preuves demandées aux deux parties", T.amber]],
-    };
-    const live = notifications.filter(n => n.role === role).map(n => [n.date, n.titre, n.texte, n.color]);
-    const feed = [...live, ...N[role]];
-    return (
-      <div style={{ padding: 16 }}>
-        <h1 style={{ ...S.h1, margin: "10px 0 16px" }}>Notifications</h1>
-        {feed.map(([d, t, s, c], i) => (
-          <Card key={i} style={{ marginBottom: 8, borderLeft: `4px solid ${c}` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14 }}>{t}</div>
-              <span style={{ ...S.sub, fontSize: 11, flexShrink: 0 }}>{d}</span>
-            </div>
-            <div style={{ ...S.sub, fontSize: 13, marginTop: 3 }}>{s}</div>
-          </Card>
-        ))}
-        <div style={{ ...S.sub, fontSize: 12, textAlign: "center", marginTop: 8 }}>Push · e-mail · SMS · WhatsApp selon vos préférences</div>
-      </div>
-    );
-  };
+  const NotifsScreen = () => (
+    <div style={{ padding: 16 }}>
+      <h1 style={{ ...S.h1, margin: "10px 0 16px" }}>Notifications</h1>
+      {notifications.length === 0 && <Card><div style={S.sub}>Aucune notification pour l'instant.</div></Card>}
+      {notifications.map(n => (
+        <Card key={n.id} style={{ marginBottom: 8, borderLeft: `4px solid ${n.color || T.sub}`, opacity: n.lu ? 0.7 : 1 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+            <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14 }}>{n.titre}</div>
+            <span style={{ ...S.sub, fontSize: 11, flexShrink: 0 }}>{new Date(n.date).toLocaleDateString("fr-CH", { day: "2-digit", month: "short" })}</span>
+          </div>
+          <div style={{ ...S.sub, fontSize: 13, marginTop: 3 }}>{n.texte}</div>
+        </Card>
+      ))}
+      <div style={{ ...S.sub, fontSize: 12, textAlign: "center", marginTop: 8 }}>Push · e-mail · SMS · WhatsApp selon vos préférences</div>
+    </div>
+  );
 
   /* ================= PRO — INSCRIPTION ENTREPRISE ================= */
   const ProOnboardScreen = () => (
@@ -2249,7 +2337,7 @@ export default function App() {
       </div>
       {onb === 0 && <>
         <h1 style={{ ...S.h1, fontSize: 22, marginBottom: 14 }}>Votre entreprise</h1>
-        {[["Raison sociale", "MV-3 PRO Sàrl"], ["IDE / TVA", "CHE-465.910.257"], ["Adresse", "Sion (VS)"], ["Métiers", "Carrelage · Parquet · Sanitaire"], ["Zones desservies", "Valais central · 25 km"], ["Employés", "4 · depuis 2015"], ["Langues", "FR · DE · BS"]].map(([k, v]) => (
+        {[["Raison sociale", MY_ENTREPRISE], ["IDE / TVA", "À compléter"], ["Adresse", "À compléter"], ["Métiers", "Carrelage · Parquet · Sanitaire"], ["Zones desservies", "Valais central · 25 km"], ["Employés", "À compléter"], ["Langues", "FR · DE · BS"]].map(([k, v]) => (
           <Card key={k} style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", padding: "12px 14px" }}>
             <span style={{ ...S.sub, fontWeight: 700 }}>{k}</span><span style={{ ...S.body, fontWeight: 700, fontSize: 13.5, textAlign: "right" }}>{v}</span>
           </Card>
@@ -2306,11 +2394,30 @@ export default function App() {
     profile: ProfileScreen,
   };
 
+  if (!authChecked) {
+    return (
+      <div style={{ background: "#DDDBD2", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <Loader2 size={28} color={T.red} style={{ animation: "spin 1s linear infinite" }} />
+      </div>
+    );
+  }
+  if (!authUser) {
+    return (
+      <div style={{ background: "#DDDBD2", minHeight: "100vh", fontFamily: FONT }}>
+        <AuthScreen />
+      </div>
+    );
+  }
+
   return (
     <div style={{ background: "#DDDBD2", minHeight: "100vh", fontFamily: FONT }}>
       <div style={{ maxWidth: 480, margin: "0 auto", background: T.bg, minHeight: "100vh", paddingBottom: 90 }}>
         <Header />
-        {screens[screen]()}
+        {dataLoading && chantiers.length === 0 ? (
+          <div style={{ padding: 60, textAlign: "center" }}>
+            <Loader2 size={24} color={T.red} style={{ animation: "spin 1s linear infinite" }} />
+          </div>
+        ) : screens[screen]()}
         <NavBar />
       </div>
     </div>
