@@ -193,6 +193,7 @@ export default function App() {
   const [authError, setAuthError] = useState("");
   const [authBusy, setAuthBusy] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
+  const [actionError, setActionError] = useState("");
   const [authForm, setAuthForm] = useState({
     role: "client", email: "", password: "", nom: "", entreprise: "", organisation: "", npaCommune: "",
   });
@@ -268,7 +269,7 @@ export default function App() {
   }, []);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const go = s => { setScreen(s); window.scrollTo(0, 0); };
+  const go = s => { setScreen(s); setActionError(""); window.scrollTo(0, 0); };
   const MY_ENTREPRISE = authUser?.entreprise || authUser?.nom || "";
   const MY_ORG = authUser?.organisation || authUser?.nom || "";
 
@@ -366,18 +367,30 @@ export default function App() {
   const setChCategorie = cat => setChForm(f => ({ ...f, categorie: cat, metres: metresDefaut(cat) }));
   const toggleInvite = nom => setChForm(f => ({ ...f, invites: f.invites.includes(nom) ? f.invites.filter(x => x !== nom) : [...f.invites, nom] }));
   const addChPhotos = async files => {
-    const uploaded = await Promise.all(Array.from(files).map(uploadFile));
-    setChForm(f => ({ ...f, photos: [...f.photos, ...uploaded] }));
+    setActionError("");
+    try {
+      const uploaded = await Promise.all(Array.from(files).map(uploadFile));
+      setChForm(f => ({ ...f, photos: [...f.photos, ...uploaded] }));
+    } catch (e) {
+      setActionError(e.message);
+    }
   };
   const removeChPhoto = i => setChForm(f => ({ ...f, photos: f.photos.filter((_, j) => j !== i) }));
   const publishChantier = async () => {
-    await api.createChantier({ ...chForm, demandeur: chForm.demandeur.trim() });
-    setChStep(0);
-    setChForm(emptyChForm());
-    await refreshAll();
-    go("chantierPublished");
+    setActionError("");
+    if (!chForm.titre.trim()) { setActionError("Le titre du chantier est requis (étape 1)."); return; }
+    try {
+      await api.createChantier({ ...chForm, demandeur: chForm.demandeur.trim() });
+      setChStep(0);
+      setChForm(emptyChForm());
+      await refreshAll();
+      go("chantierPublished");
+    } catch (e) {
+      setActionError(e.message);
+    }
   };
   const publishClientDemande = async () => {
+    setActionError("");
     const payload = {
       titre: `${form.type} — ${form.bien}`, categorie: "Carrelage", ville: form.npa, adresse: "",
       typeBien: form.bien, etage: "", numAppart: "",
@@ -386,10 +399,14 @@ export default function App() {
       budget: form.budget, delai: form.delai, limite: "", prive: false, invites: [], photos: [],
       tags: [form.type],
     };
-    const { chantier } = await api.createChantier(payload);
-    setMonChantierId(chantier.id);
-    await refreshAll();
-    go("published");
+    try {
+      const { chantier } = await api.createChantier(payload);
+      setMonChantierId(chantier.id);
+      await refreshAll();
+      go("published");
+    } catch (e) {
+      setActionError(e.message);
+    }
   };
   const startPromoProject = () => {
     setChForm({ ...emptyChForm(), demandeur: MY_ORG });
@@ -406,53 +423,98 @@ export default function App() {
   const updateBidLine = (i, field, value) => setBidLines(ls => ls.map((l, j) => j === i ? { ...l, [field]: Math.max(0, Number(value) || 0) } : l));
   const bidTotal = bidLines.reduce((s, l) => s + l.q * l.pu, 0);
   const submitBid = async () => {
-    await api.createSoumission({
-      chantierId: selectedChantierId, lignes: bidLines,
-      delaiDebut: bidMeta.delaiDebut, duree: bidMeta.duree, garantie: bidMeta.garantie, remarques: bidMeta.remarques,
-    });
-    await refreshAll();
-    go("proSent");
+    setActionError("");
+    try {
+      await api.createSoumission({
+        chantierId: selectedChantierId, lignes: bidLines,
+        delaiDebut: bidMeta.delaiDebut, duree: bidMeta.duree, garantie: bidMeta.garantie, remarques: bidMeta.remarques,
+      });
+      await refreshAll();
+      go("proSent");
+    } catch (e) {
+      setActionError(e.message);
+    }
   };
   const adjuger = async (chantierId, soumissionId) => {
-    await api.adjuger(soumissionId);
-    await refreshAll();
-    const { suivi } = await api.getSuiviByChantier(chantierId);
-    return suivi;
+    setActionError("");
+    try {
+      await api.adjuger(soumissionId);
+      await refreshAll();
+      const { suivi } = await api.getSuiviByChantier(chantierId);
+      return suivi;
+    } catch (e) {
+      setActionError(e.message);
+    }
   };
   const payerFacture = async id => {
-    await api.payFacture(id);
-    await refreshAll();
+    setActionError("");
+    try {
+      await api.payFacture(id);
+      await refreshAll();
+    } catch (e) {
+      setActionError(e.message);
+    }
   };
   const viewFacturePdf = id => { setPdfFactureId(id); go("facturePdf"); };
   const toggleJalon = async (sid, jid) => {
-    await api.toggleJalon(sid, jid);
-    await refreshAll();
+    setActionError("");
+    try {
+      await api.toggleJalon(sid, jid);
+      await refreshAll();
+    } catch (e) {
+      setActionError(e.message);
+    }
   };
   const addSuiviPhoto = async (sid, cat, files) => {
-    const uploaded = await Promise.all(Array.from(files).map(uploadFile));
-    for (const p of uploaded) await api.addSuiviPhoto(sid, cat, p.url, p.name);
-    await refreshAll();
+    setActionError("");
+    try {
+      const uploaded = await Promise.all(Array.from(files).map(uploadFile));
+      for (const p of uploaded) await api.addSuiviPhoto(sid, cat, p.url, p.name);
+      await refreshAll();
+    } catch (e) {
+      setActionError(e.message);
+    }
   };
   const removeSuiviPhoto = async (sid, cat, i) => {
     const suivi = suivis.find(s => s.id === sid);
     const photo = suivi?.photos?.[cat]?.[i];
     if (!photo) return;
-    await api.removeSuiviPhoto(sid, photo.url);
-    await refreshAll();
+    setActionError("");
+    try {
+      await api.removeSuiviPhoto(sid, photo.url);
+      await refreshAll();
+    } catch (e) {
+      setActionError(e.message);
+    }
   };
   const finirChantier = async sid => {
-    await api.finishSuivi(sid);
-    await refreshAll();
+    setActionError("");
+    try {
+      await api.finishSuivi(sid);
+      await refreshAll();
+    } catch (e) {
+      setActionError(e.message);
+    }
   };
   const addSuiviDoc = async (sid, jalonId, file) => {
     if (!file) return;
-    const { url, name } = await uploadFile(file);
-    await api.addSuiviDocument(sid, jalonId, url, name);
-    await refreshAll();
+    setActionError("");
+    try {
+      const { url, name } = await uploadFile(file);
+      await api.addSuiviDocument(sid, jalonId, url, name);
+      await refreshAll();
+    } catch (e) {
+      setActionError(e.message);
+    }
   };
   const removeSuiviDoc = async (sid, docId) => {
-    await api.removeSuiviDocument(docId);
-    await refreshAll();
+    setActionError("");
+    try {
+      await api.removeSuiviDocument(docId);
+      await refreshAll();
+    } catch (e) {
+      setActionError(e.message);
+    }
   };
   const viewPdf = soumissionId => { setPdfSoumissionId(soumissionId); go("bordereauPdf"); };
 
@@ -1029,8 +1091,13 @@ export default function App() {
       <textarea placeholder="Racontez votre expérience (facultatif)…" value={review.commentaire} onChange={e => setReview(r => ({ ...r, commentaire: e.target.value }))}
         style={{ width: "100%", boxSizing: "border-box", fontFamily: FONT, fontSize: 14, padding: 13, borderRadius: 12, border: `1px solid ${T.line}`, background: T.white, minHeight: 80, resize: "none", outline: "none", marginBottom: 12 }} />
       <Btn disabled={review.done || !suivi} onClick={async () => {
-        await api.createReview({ suiviId: suivi.id, q: review.q, prix: review.prix, delai: review.delai, com: review.com, prop: review.prop, sav: review.sav, commentaire: review.commentaire });
-        setReview(r => ({ ...r, done: true }));
+        setActionError("");
+        try {
+          await api.createReview({ suiviId: suivi.id, q: review.q, prix: review.prix, delai: review.delai, com: review.com, prop: review.prop, sav: review.sav, commentaire: review.commentaire });
+          setReview(r => ({ ...r, done: true }));
+        } catch (e) {
+          setActionError(e.message);
+        }
       }}>
         {review.done ? "✓ Avis publié — merci !" : "Publier mon avis"}
       </Btn>
@@ -2269,8 +2336,7 @@ export default function App() {
     const accepterEtPayer = async () => {
       if (!s) return;
       const suivi = await adjuger(s.chantierId, s.id);
-      if (suivi) setSuiviId(suivi.id);
-      go("suivi");
+      if (suivi) { setSuiviId(suivi.id); go("suivi"); }
     };
     return (
     <div style={{ padding: 16 }}>
@@ -2413,6 +2479,14 @@ export default function App() {
     <div style={{ background: "#DDDBD2", minHeight: "100vh", fontFamily: FONT }}>
       <div style={{ maxWidth: 480, margin: "0 auto", background: T.bg, minHeight: "100vh", paddingBottom: 90 }}>
         <Header />
+        {actionError && (
+          <div style={{ margin: "0 16px 10px", background: T.redBg, border: `1px solid ${T.red}`, borderRadius: 10, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+            <span style={{ fontFamily: FONT, fontSize: 12.5, fontWeight: 600, color: T.red }}>{actionError}</span>
+            <button onClick={() => setActionError("")} style={{ background: "none", border: "none", cursor: "pointer", flexShrink: 0, display: "flex" }}>
+              <X size={15} color={T.red} />
+            </button>
+          </div>
+        )}
         {dataLoading && chantiers.length === 0 ? (
           <div style={{ padding: 60, textAlign: "center" }}>
             <Loader2 size={24} color={T.red} style={{ animation: "spin 1s linear infinite" }} />
