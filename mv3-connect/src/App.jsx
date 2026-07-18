@@ -26,7 +26,7 @@ const S = {
 
 /* ---------------- Building blocks ---------------- */
 const Card = ({ children, style, onClick }) => (
-  <div onClick={onClick} style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 12, padding: 14, cursor: onClick ? "pointer" : "default", ...style }}>{children}</div>
+  <div className={onClick ? "ui-card ui-card-clickable" : "ui-card"} onClick={onClick} style={{ background: T.white, border: `1px solid ${T.line}`, borderRadius: 12, padding: 14, boxShadow: "0 1px 2px rgba(22,24,28,.04)", cursor: onClick ? "pointer" : "default", ...style }}>{children}</div>
 );
 const Btn = ({ children, onClick, kind = "primary", style, disabled }) => {
   const kinds = {
@@ -64,9 +64,9 @@ const Back = ({ onClick, label }) => (
   </button>
 );
 const KPI = ({ n, l, c }) => (
-  <Card style={{ padding: "12px 12px", textAlign: "left" }}>
-    <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 22, color: c || T.ink, letterSpacing: "-0.02em" }}>{n}</div>
-    <div style={{ ...S.sub, fontSize: 11.5, marginTop: 2 }}>{l}</div>
+  <Card style={{ padding: "14px 16px", textAlign: "left", borderTop: `3px solid ${c || T.line}` }}>
+    <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 25, color: c || T.ink, letterSpacing: "-0.02em", lineHeight: 1.1 }}>{n}</div>
+    <div style={{ ...S.sub, fontSize: 12, marginTop: 4, fontWeight: 600 }}>{l}</div>
   </Card>
 );
 const Stars = ({ v, set, size = 22 }) => (
@@ -250,26 +250,32 @@ export default function App() {
       "@media print{body *{visibility:hidden}.pdf-doc,.pdf-doc *{visibility:visible}" +
       ".pdf-doc{position:absolute;left:0;top:0;box-shadow:none!important;margin:0!important}" +
       ".no-print{display:none!important}@page{size:A4;margin:0}}" +
+      ".ui-card-clickable{transition:box-shadow .15s ease,transform .15s ease}" +
       /* ---- Mise en page bureau / tablette (>=760px) ---- */
       "@media (min-width:760px){" +
-      ".app-shell{max-width:1280px!important;margin:0 auto!important}" +
-      ".app-header{margin-left:220px!important}" +
+      ".app-shell{max-width:1320px!important;margin:0 auto!important}" +
+      ".app-header{margin-left:224px!important}" +
       ".app-header-brand{display:none!important}" +
-      ".app-header>div{justify-content:flex-end!important}" +
-      ".app-main{margin-left:220px!important;padding-bottom:32px!important;max-width:960px}" +
+      ".app-page-title{display:block!important}" +
+      ".app-main{margin-left:224px!important;padding-bottom:32px!important;max-width:1040px}" +
       ".nav-bar{position:fixed!important;left:0!important;right:auto!important;top:0!important;bottom:0!important;" +
-      "width:220px!important;height:100vh!important;flex-direction:column!important;justify-content:flex-start!important;" +
-      "align-items:stretch!important;gap:2px!important;padding:22px 12px 20px!important;border-top:none!important;" +
-      "border-right:1px solid #E4E2D9;max-width:220px!important}" +
+      "width:224px!important;height:100vh!important;flex-direction:column!important;justify-content:flex-start!important;" +
+      "align-items:stretch!important;gap:2px!important;padding:22px 12px 14px!important;border-top:none!important;" +
+      "border-right:1px solid #E4E2D9;max-width:224px!important}" +
       ".nav-bar-brand{display:flex!important}" +
+      ".nav-bar-profile{display:flex!important}" +
       ".nav-bar button{flex-direction:row!important;justify-content:flex-start!important;gap:12px!important;" +
       "padding:11px 14px!important;border-radius:9px!important}" +
       ".nav-bar button:hover{background:#ECEAE2}" +
+      ".nav-item-active{background:#FDEEEC!important;box-shadow:inset 3px 0 0 #DD2A17!important}" +
+      ".nav-item-active:hover{background:#FDEEEC!important}" +
       ".nav-bar button span{font-size:13px!important}" +
       ".kpi-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))!important}" +
       ".two-col-grid{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))!important;align-items:start}" +
+      ".dash-cols{display:grid!important;grid-template-columns:1fr 300px!important;gap:22px!important;align-items:start!important}" +
+      ".ui-card-clickable:hover{box-shadow:0 6px 16px rgba(22,24,28,.10)!important;transform:translateY(-1px)}" +
       "}" +
-      "@media (min-width:760px) and (max-width:1023px){.app-main{max-width:100%}}";
+      "@media (min-width:760px) and (max-width:1023px){.app-main{max-width:100%}.dash-cols{grid-template-columns:1fr!important}}";
     document.head.appendChild(st);
   }, []);
 
@@ -656,7 +662,9 @@ export default function App() {
   };
 
   /* ---------------- Header ---------------- */
-  const Header = () => (
+  const Header = () => {
+    const activeNav = (NAVS[role] || []).find(([s]) => s === screen);
+    return (
     <div className="app-header" style={{ position: "sticky", top: 0, zIndex: 20, background: T.bg, borderBottom: `1px solid ${T.line}`, padding: "12px 14px 10px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div className="app-header-brand" style={{ display: "flex", alignItems: "center", gap: 7 }}>
@@ -665,6 +673,7 @@ export default function App() {
           </div>
           <span style={{ fontFamily: FONT, fontWeight: 900, fontSize: 15.5, letterSpacing: "-0.02em" }}>MV3 CONNECT</span>
         </div>
+        {activeNav && <div className="app-page-title" style={{ display: "none", fontFamily: FONT, fontWeight: 800, fontSize: 16.5, letterSpacing: "-0.01em", color: T.ink }}>{activeNav[2]}</div>}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <button onClick={() => go("notifs")} style={{ position: "relative", background: T.white, border: `1px solid ${T.line}`, borderRadius: 9, padding: 7, cursor: "pointer", display: "flex" }}>
             <Bell size={15} color={T.ink} />
@@ -681,7 +690,8 @@ export default function App() {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   /* ---------------- Bottom nav ---------------- */
   const NAVS = {
@@ -690,7 +700,11 @@ export default function App() {
     promo: [["promoHome", Building2, "Projets"], ["chat", MessageSquare, "Messages"], ["profile", User, "Profil"]],
     admin: [["adminHome", LayoutDashboard, "Cockpit"], ["adminPublish", Plus, "Publier"], ["adminPilot", BarChart3, "Pilotage"], ["adminQueue", AlertCircle, "Vérifier"], ["profile", User, "Profil"]],
   };
-  const NavBar = () => (
+  const NavBar = () => {
+    const displayName = authUser?.entreprise || authUser?.organisation || authUser?.nom || "";
+    const initials = displayName.split(" ").filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
+    const roleLabel = { client: "Client", pro: "Sous-traitant", promo: "Promoteur", admin: "Administrateur" }[role] || "";
+    return (
     <div className="nav-bar" style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 30, background: T.white, borderTop: `1px solid ${T.line}`, display: "flex", justifyContent: "space-around", padding: "8px 0 max(10px, env(safe-area-inset-bottom))", maxWidth: 480, margin: "0 auto" }}>
       <div className="nav-bar-brand" style={{ display: "none", alignItems: "center", gap: 8, padding: "0 14px 22px" }}>
         <div style={{ width: 21, height: 21, background: T.red, borderRadius: 4, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, padding: 3 }}>
@@ -701,14 +715,25 @@ export default function App() {
       {NAVS[role].map(([s, I, lbl]) => {
         const a = screen === s;
         return (
-          <button key={s} onClick={() => go(s)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flex: 1 }}>
+          <button key={s} onClick={() => go(s)} className={a ? "nav-item nav-item-active" : "nav-item"} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flex: 1 }}>
             <I size={20} color={a ? T.red : T.sub} strokeWidth={a ? 2.4 : 2} />
             <span style={{ fontFamily: FONT, fontSize: 10, fontWeight: a ? 800 : 600, color: a ? T.red : T.sub }}>{lbl}</span>
           </button>
         );
       })}
+      <div className="nav-bar-profile" style={{ display: "none", alignItems: "center", gap: 9, padding: "12px 10px", marginTop: "auto", borderTop: `1px solid ${T.line}` }}>
+        <div style={{ width: 32, height: 32, borderRadius: "50%", background: T.ink, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: FONT, fontWeight: 800, fontSize: 12.5, flexShrink: 0 }}>{initials}</div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{displayName}</div>
+          <div style={{ fontFamily: FONT, fontWeight: 600, fontSize: 10.5, color: T.sub }}>{roleLabel}</div>
+        </div>
+        <button onClick={doLogout} title="Se déconnecter" style={{ background: T.soft, border: "none", borderRadius: 7, padding: 6, cursor: "pointer", display: "flex", flexShrink: 0 }}>
+          <LogOut size={13} color={T.sub} />
+        </button>
+      </div>
     </div>
-  );
+    );
+  };
 
   /* ================= CLIENT — HOME ================= */
   const HomeScreen = () => (
@@ -1517,29 +1542,36 @@ export default function App() {
     return (
     <div style={{ padding: 16 }}>
       <h1 style={{ ...S.h1, margin: "10px 0 16px" }}>Cockpit</h1>
-      <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+      <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 18 }}>
         <KPI n="14" l="demandes aujourd'hui" c={T.red} /><KPI n="5" l="à vérifier" c={T.amber} />
         <KPI n="38 %" l="taux de conversion" c={T.green} /><KPI n={totalCommissions.toLocaleString("fr-CH")} l="CHF commissions marketplace" />
       </div>
-      <div style={{ ...S.label, margin: "18px 0 8px" }}>Alertes</div>
-      {[["Assurance RC expirée — Batisol Valais SA", "Suspension automatique dans 5 jours", T.red, T.redBg],
-      ["Avis signalé — chantier #1847", "Preuves demandées aux deux parties", T.amber, T.amberBg],
-      ["Contournement suspecté — demande #2011", "Numéro échangé dans le chat avant acceptation", T.amber, T.amberBg]].map(([t, s, c, bg], i) => (
-        <Card key={i} style={{ marginBottom: 8, background: bg, border: "none" }}>
-          <div style={{ display: "flex", gap: 10 }}>
-            <AlertCircle size={18} color={c} style={{ flexShrink: 0, marginTop: 1 }} />
-            <div>
-              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: c }}>{t}</div>
-              <div style={{ ...S.sub, fontSize: 12.5 }}>{s}</div>
-            </div>
+      <div className="dash-cols">
+        <div>
+          <div style={S.label}>Alertes</div>
+          {[["Assurance RC expirée — Batisol Valais SA", "Suspension automatique dans 5 jours", T.red, T.redBg],
+          ["Avis signalé — chantier #1847", "Preuves demandées aux deux parties", T.amber, T.amberBg],
+          ["Contournement suspecté — demande #2011", "Numéro échangé dans le chat avant acceptation", T.amber, T.amberBg]].map(([t, s, c, bg], i) => (
+            <Card key={i} style={{ marginTop: 8, background: bg, border: "none" }}>
+              <div style={{ display: "flex", gap: 10 }}>
+                <AlertCircle size={18} color={c} style={{ flexShrink: 0, marginTop: 1 }} />
+                <div>
+                  <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: c }}>{t}</div>
+                  <div style={{ ...S.sub, fontSize: 12.5 }}>{s}</div>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+        <div>
+          <div style={S.label}>File de vérification</div>
+          <Btn kind="dark" style={{ marginTop: 8 }} onClick={() => go("adminQueue")}>Traiter les 5 demandes <ChevronRight size={17} /></Btn>
+          <div style={{ ...S.label, margin: "18px 0 8px" }}>Actions rapides</div>
+          <div style={{ display: "grid", gap: 8 }}>
+            <Btn kind="soft" style={{ fontSize: 13, justifyContent: "flex-start" }} onClick={() => go("adminPublish")}><Plus size={16} /> Publier un chantier</Btn>
+            <Btn kind="soft" style={{ fontSize: 13, justifyContent: "flex-start" }} onClick={() => go("adminPilot")}><BarChart3 size={16} /> Pilotage</Btn>
           </div>
-        </Card>
-      ))}
-      <div style={{ ...S.label, margin: "16px 0 8px" }}>File de vérification</div>
-      <Btn kind="dark" onClick={() => go("adminQueue")}>Traiter les 5 demandes en attente <ChevronRight size={17} /></Btn>
-      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-        <Btn kind="soft" style={{ fontSize: 13 }} onClick={() => go("adminPublish")}><Plus size={16} /> Publier un chantier</Btn>
-        <Btn kind="soft" style={{ fontSize: 13 }} onClick={() => go("adminPilot")}><BarChart3 size={16} /> Pilotage</Btn>
+        </div>
       </div>
     </div>
     );
