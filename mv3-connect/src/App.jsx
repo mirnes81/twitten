@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Grid3x3, Layers, Bath, Droplets, Hammer, Paintbrush, Zap, Flame,
   Camera, Mic, FileText, MapPin, ChevronRight, ChevronLeft, Search,
@@ -6,8 +6,9 @@ import {
   CheckCircle2, Clock, Star, Shield, Send, Plus, Minus, X, Check,
   Calendar, TrendingUp, Eye, Image, PenLine, Building2, LayoutDashboard,
   BarChart3, Video, Phone, AlertCircle, FileSignature, Bell,
-  Loader2, CreditCard, QrCode, LogOut, Lock, Mail
+  Loader2, CreditCard, QrCode, LogOut, Lock, Mail, Wallet, ClipboardCheck, Activity, Inbox
 } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { api, setToken, getToken } from "./api";
 
 /* ---------------- Tokens ---------------- */
@@ -67,6 +68,17 @@ const KPI = ({ n, l, c }) => (
   <Card style={{ padding: "14px 16px", textAlign: "left", borderTop: `3px solid ${c || T.line}` }}>
     <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 25, color: c || T.ink, letterSpacing: "-0.02em", lineHeight: 1.1 }}>{n}</div>
     <div style={{ ...S.sub, fontSize: 12, marginTop: 4, fontWeight: 600 }}>{l}</div>
+  </Card>
+);
+const KpiCardIcon = ({ icon: Icon, n, l, c, bg }) => (
+  <Card style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ width: 38, height: 38, borderRadius: 10, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <Icon size={19} color={c} strokeWidth={2.2} />
+    </div>
+    <div>
+      <div style={{ fontFamily: FONT, fontWeight: 900, fontSize: 24, color: T.ink, letterSpacing: "-0.02em", lineHeight: 1.1 }}>{n}</div>
+      <div style={{ ...S.sub, fontSize: 12, marginTop: 3, fontWeight: 600 }}>{l}</div>
+    </div>
   </Card>
 );
 const Stars = ({ v, set, size = 22 }) => (
@@ -239,6 +251,21 @@ export default function App() {
   const [payMethod, setPayMethod] = useState("TWINT");
   const [onb, setOnb] = useState(0);
   const [plan, setPlan] = useState("Premium");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    const onKeyDown = e => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+      if (e.key === "Escape") setSearchOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   useEffect(() => {
     const l = document.createElement("link");
@@ -664,6 +691,10 @@ export default function App() {
   /* ---------------- Header ---------------- */
   const Header = () => {
     const activeNav = (NAVS[role] || []).find(([s]) => s === screen);
+    const q = searchQuery.trim().toLowerCase();
+    const searchResults = role === "admin" && q
+      ? chantiers.filter(c => `${c.titre} ${c.ville || ""}`.toLowerCase().includes(q)).slice(0, 6)
+      : [];
     return (
     <div className="app-header" style={{ position: "sticky", top: 0, zIndex: 20, background: T.bg, borderBottom: `1px solid ${T.line}`, padding: "12px 14px 10px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -673,7 +704,34 @@ export default function App() {
           </div>
           <span style={{ fontFamily: FONT, fontWeight: 900, fontSize: 15.5, letterSpacing: "-0.02em" }}>MV3 CONNECT</span>
         </div>
-        {activeNav && <div className="app-page-title" style={{ display: "none", fontFamily: FONT, fontWeight: 800, fontSize: 16.5, letterSpacing: "-0.01em", color: T.ink }}>{activeNav[2]}</div>}
+        {role === "admin" ? (
+          <div className="app-page-title" style={{ display: "none", position: "relative", flex: 1, maxWidth: 420, margin: "0 20px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: T.white, border: `1px solid ${T.line}`, borderRadius: 9, padding: "8px 12px" }}>
+              <Search size={15} color={T.sub} />
+              <input ref={searchInputRef} value={searchQuery}
+                onChange={e => { setSearchQuery(e.target.value); setSearchOpen(true); }}
+                onFocus={() => setSearchOpen(true)}
+                onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
+                placeholder="Rechercher un chantier, une ville…"
+                style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontFamily: FONT, fontSize: 13 }} />
+              <span style={{ fontFamily: FONT, fontSize: 10.5, fontWeight: 700, color: T.sub, background: T.soft, padding: "2px 6px", borderRadius: 5 }}>⌘K</span>
+            </div>
+            {searchOpen && q && (
+              <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, background: T.white, border: `1px solid ${T.line}`, borderRadius: 10, boxShadow: "0 8px 24px rgba(22,24,28,.14)", overflow: "hidden", zIndex: 40 }}>
+                {searchResults.length === 0 && <div style={{ padding: 12, ...S.sub, fontSize: 12.5 }}>Aucun résultat.</div>}
+                {searchResults.map((c, i) => (
+                  <div key={c.id} onMouseDown={() => { setPilotChantierId(c.id); go("adminChantierCompare"); setSearchQuery(""); setSearchOpen(false); }}
+                    style={{ padding: "9px 12px", cursor: "pointer", borderTop: i ? `1px solid ${T.line}` : "none" }}>
+                    <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5 }}>{c.titre}</div>
+                    <div style={{ ...S.sub, fontSize: 11 }}>{c.ville || "—"} · {c.statut}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          activeNav && <div className="app-page-title" style={{ display: "none", fontFamily: FONT, fontWeight: 800, fontSize: 16.5, letterSpacing: "-0.01em", color: T.ink }}>{activeNav[2]}</div>
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <button onClick={() => go("notifs")} style={{ position: "relative", background: T.white, border: `1px solid ${T.line}`, borderRadius: 9, padding: 7, cursor: "pointer", display: "flex" }}>
             <Bell size={15} color={T.ink} />
@@ -1539,38 +1597,115 @@ export default function App() {
   /* ================= ADMIN ================= */
   const AdminHomeScreen = () => {
     const totalCommissions = factures.reduce((s, f) => s + f.commission, 0);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const demandesAujourdhui = chantiers.filter(c => (c.createdAt || "").slice(0, 10) === todayStr).length;
+    const tauxConversion = chantiers.length ? Math.round((chantiers.filter(c => c.statut === "Attribué").length / chantiers.length) * 100) : 0;
+
+    const chartData = Array.from({ length: 14 }).map((_, i) => {
+      const d = new Date(); d.setDate(d.getDate() - (13 - i));
+      const key = d.toISOString().slice(0, 10);
+      const total = factures.filter(f => (f.date || "").slice(0, 10) === key).reduce((s, f) => s + f.commission, 0);
+      return { label: d.toLocaleDateString("fr-CH", { day: "2-digit", month: "2-digit" }), total: Math.round(total * 100) / 100 };
+    });
+    const hasChartData = chartData.some(d => d.total > 0);
+
+    const activity = [
+      ...chantiers.map(c => ({ date: c.createdAt, icon: Plus, color: T.red, text: `Chantier publié : ${c.titre}`, sub: c.ville || "—" })),
+      ...soumissions.map(s => ({ date: s.date, icon: Send, color: T.amber, text: `Soumission de ${s.entreprise}`, sub: (chantiers.find(c => c.id === s.chantierId) || {}).titre || "" })),
+      ...factures.filter(f => f.statut === "Payée").map(f => ({ date: f.date, icon: Wallet, color: T.green, text: `Commission payée — ${f.entreprise}`, sub: (chantiers.find(c => c.id === f.chantierId) || {}).titre || "" })),
+    ].filter(a => a.date).sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
+
+    const chantiersRecents = [...chantiers].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5).map(c => {
+      const suivi = suivis.find(sv => sv.chantierId === c.id);
+      const pct = suivi && suivi.jalons.length ? Math.round((suivi.jalons.filter(j => j.done).length / suivi.jalons.length) * 100) : null;
+      return { ...c, pct };
+    });
+
     return (
     <div style={{ padding: 16 }}>
       <h1 style={{ ...S.h1, margin: "10px 0 16px" }}>Cockpit</h1>
       <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 18 }}>
-        <KPI n="14" l="demandes aujourd'hui" c={T.red} /><KPI n="5" l="à vérifier" c={T.amber} />
-        <KPI n="38 %" l="taux de conversion" c={T.green} /><KPI n={totalCommissions.toLocaleString("fr-CH")} l="CHF commissions marketplace" />
+        <KpiCardIcon icon={Inbox} n={demandesAujourdhui} l="demandes aujourd'hui" c={T.red} bg={T.redBg} />
+        <KpiCardIcon icon={ClipboardCheck} n={ADMIN_QUEUE.length} l="à vérifier" c={T.amber} bg={T.amberBg} />
+        <KpiCardIcon icon={Activity} n={tauxConversion + " %"} l="taux de conversion" c={T.green} bg={T.greenBg} />
+        <KpiCardIcon icon={Wallet} n={totalCommissions.toLocaleString("fr-CH")} l="CHF commissions marketplace" c={T.ink} bg={T.soft} />
       </div>
+
       <div className="dash-cols">
         <div>
-          <div style={S.label}>Alertes</div>
-          {[["Assurance RC expirée — Batisol Valais SA", "Suspension automatique dans 5 jours", T.red, T.redBg],
-          ["Avis signalé — chantier #1847", "Preuves demandées aux deux parties", T.amber, T.amberBg],
-          ["Contournement suspecté — demande #2011", "Numéro échangé dans le chat avant acceptation", T.amber, T.amberBg]].map(([t, s, c, bg], i) => (
-            <Card key={i} style={{ marginTop: 8, background: bg, border: "none" }}>
-              <div style={{ display: "flex", gap: 10 }}>
-                <AlertCircle size={18} color={c} style={{ flexShrink: 0, marginTop: 1 }} />
-                <div>
-                  <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 13.5, color: c }}>{t}</div>
-                  <div style={{ ...S.sub, fontSize: 12.5 }}>{s}</div>
-                </div>
+          <Card style={{ padding: "18px 18px 8px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontFamily: FONT, fontWeight: 800, fontSize: 14.5 }}>Commissions encaissées</div>
+              <span style={{ ...S.sub, fontSize: 11.5 }}>14 derniers jours</span>
+            </div>
+            {hasChartData ? (
+              <div style={{ height: 190, margin: "8px 0 0" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ top: 6, right: 8, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="commissionFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={T.red} stopOpacity={0.28} />
+                        <stop offset="100%" stopColor={T.red} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke={T.line} vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontFamily: FONT, fontSize: 10.5, fill: T.sub }} axisLine={false} tickLine={false} interval={1} />
+                    <YAxis tick={{ fontFamily: FONT, fontSize: 10.5, fill: T.sub }} axisLine={false} tickLine={false} width={46} tickFormatter={v => v.toLocaleString("fr-CH")} />
+                    <Tooltip formatter={v => [`${v.toLocaleString("fr-CH")} CHF`, "Commissions"]} contentStyle={{ fontFamily: FONT, fontSize: 12, borderRadius: 8, border: `1px solid ${T.line}` }} />
+                    <Area type="monotone" dataKey="total" stroke={T.red} strokeWidth={2.4} fill="url(#commissionFill)" />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
-            </Card>
-          ))}
+            ) : (
+              <div style={{ padding: "30px 0 20px", textAlign: "center", ...S.sub }}>Aucune commission facturée sur les 14 derniers jours.</div>
+            )}
+          </Card>
+
+          <div style={{ ...S.label, margin: "18px 0 8px" }}>Chantiers récents</div>
+          <Card style={{ padding: 0, overflow: "hidden" }}>
+            {chantiersRecents.length === 0 && <div style={{ padding: 16, ...S.sub }}>Aucun chantier publié pour l'instant.</div>}
+            {chantiersRecents.map((c, i) => (
+              <div key={c.id} onClick={() => { setPilotChantierId(c.id); go("adminChantierCompare"); }} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderTop: i ? `1px solid ${T.line}` : "none", cursor: "pointer" }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 13.5, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.titre}</div>
+                  <div style={{ ...S.sub, fontSize: 11.5, marginTop: 1 }}>{c.ville || "—"}</div>
+                </div>
+                <div style={{ width: 90, flexShrink: 0 }}>
+                  {c.pct !== null ? (
+                    <>
+                      <div style={{ height: 5, background: T.soft, borderRadius: 3 }}>
+                        <div style={{ height: 5, width: `${c.pct}%`, background: T.green, borderRadius: 3 }} />
+                      </div>
+                      <div style={{ ...S.sub, fontSize: 10.5, marginTop: 3, textAlign: "right" }}>{c.pct}%</div>
+                    </>
+                  ) : <div style={{ ...S.sub, fontSize: 10.5, textAlign: "right" }}>—</div>}
+                </div>
+                <Tag color={c.statut === "Attribué" ? T.green : T.amber} bg={c.statut === "Attribué" ? T.greenBg : T.amberBg} style={{ flexShrink: 0 }}>{c.statut}</Tag>
+              </div>
+            ))}
+          </Card>
         </div>
+
         <div>
-          <div style={S.label}>File de vérification</div>
-          <Btn kind="dark" style={{ marginTop: 8 }} onClick={() => go("adminQueue")}>Traiter les 5 demandes <ChevronRight size={17} /></Btn>
-          <div style={{ ...S.label, margin: "18px 0 8px" }}>Actions rapides</div>
-          <div style={{ display: "grid", gap: 8 }}>
+          <div style={S.label}>Actions rapides</div>
+          <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
+            <Btn kind="dark" style={{ fontSize: 13, justifyContent: "flex-start" }} onClick={() => go("adminQueue")}><ClipboardCheck size={16} /> Traiter la vérification</Btn>
             <Btn kind="soft" style={{ fontSize: 13, justifyContent: "flex-start" }} onClick={() => go("adminPublish")}><Plus size={16} /> Publier un chantier</Btn>
             <Btn kind="soft" style={{ fontSize: 13, justifyContent: "flex-start" }} onClick={() => go("adminPilot")}><BarChart3 size={16} /> Pilotage</Btn>
           </div>
+          <div style={{ ...S.label, margin: "20px 0 8px" }}>Activité récente</div>
+          {activity.length === 0 && <Card><div style={S.sub}>Aucune activité pour l'instant.</div></Card>}
+          {activity.map((a, i) => (
+            <div key={i} style={{ display: "flex", gap: 10, padding: "9px 2px", borderTop: i ? `1px solid ${T.line}` : "none" }}>
+              <div style={{ width: 26, height: 26, borderRadius: "50%", background: T.soft, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <a.icon size={13} color={a.color} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontFamily: FONT, fontWeight: 700, fontSize: 12.5, color: T.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.text}</div>
+                <div style={{ ...S.sub, fontSize: 11 }}>{a.sub}</div>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
