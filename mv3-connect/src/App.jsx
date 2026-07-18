@@ -249,7 +249,27 @@ export default function App() {
     st.textContent = "@keyframes spin{to{transform:rotate(360deg)}}" +
       "@media print{body *{visibility:hidden}.pdf-doc,.pdf-doc *{visibility:visible}" +
       ".pdf-doc{position:absolute;left:0;top:0;box-shadow:none!important;margin:0!important}" +
-      ".no-print{display:none!important}@page{size:A4;margin:0}}";
+      ".no-print{display:none!important}@page{size:A4;margin:0}}" +
+      /* ---- Mise en page bureau / tablette (>=760px) ---- */
+      "@media (min-width:760px){" +
+      ".app-shell{max-width:1280px!important;margin:0 auto!important}" +
+      ".app-header{margin-left:220px!important}" +
+      ".app-header-brand{display:none!important}" +
+      ".app-header>div{justify-content:flex-end!important}" +
+      ".app-main{margin-left:220px!important;padding-bottom:32px!important;max-width:960px}" +
+      ".nav-bar{position:fixed!important;left:0!important;right:auto!important;top:0!important;bottom:0!important;" +
+      "width:220px!important;height:100vh!important;flex-direction:column!important;justify-content:flex-start!important;" +
+      "align-items:stretch!important;gap:2px!important;padding:22px 12px 20px!important;border-top:none!important;" +
+      "border-right:1px solid #E4E2D9;max-width:220px!important}" +
+      ".nav-bar-brand{display:flex!important}" +
+      ".nav-bar button{flex-direction:row!important;justify-content:flex-start!important;gap:12px!important;" +
+      "padding:11px 14px!important;border-radius:9px!important}" +
+      ".nav-bar button:hover{background:#ECEAE2}" +
+      ".nav-bar button span{font-size:13px!important}" +
+      ".kpi-grid{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))!important}" +
+      ".two-col-grid{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))!important;align-items:start}" +
+      "}" +
+      "@media (min-width:760px) and (max-width:1023px){.app-main{max-width:100%}}";
     document.head.appendChild(st);
   }, []);
 
@@ -637,9 +657,9 @@ export default function App() {
 
   /* ---------------- Header ---------------- */
   const Header = () => (
-    <div style={{ position: "sticky", top: 0, zIndex: 20, background: T.bg, borderBottom: `1px solid ${T.line}`, padding: "12px 14px 10px" }}>
+    <div className="app-header" style={{ position: "sticky", top: 0, zIndex: 20, background: T.bg, borderBottom: `1px solid ${T.line}`, padding: "12px 14px 10px" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+        <div className="app-header-brand" style={{ display: "flex", alignItems: "center", gap: 7 }}>
           <div style={{ width: 21, height: 21, background: T.red, borderRadius: 4, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, padding: 3 }}>
             {[0, 1, 2, 3].map(i => <div key={i} style={{ background: "#fff", borderRadius: 1 }} />)}
           </div>
@@ -671,7 +691,13 @@ export default function App() {
     admin: [["adminHome", LayoutDashboard, "Cockpit"], ["adminPublish", Plus, "Publier"], ["adminPilot", BarChart3, "Pilotage"], ["adminQueue", AlertCircle, "Vérifier"], ["profile", User, "Profil"]],
   };
   const NavBar = () => (
-    <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 30, background: T.white, borderTop: `1px solid ${T.line}`, display: "flex", justifyContent: "space-around", padding: "8px 0 max(10px, env(safe-area-inset-bottom))", maxWidth: 480, margin: "0 auto" }}>
+    <div className="nav-bar" style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 30, background: T.white, borderTop: `1px solid ${T.line}`, display: "flex", justifyContent: "space-around", padding: "8px 0 max(10px, env(safe-area-inset-bottom))", maxWidth: 480, margin: "0 auto" }}>
+      <div className="nav-bar-brand" style={{ display: "none", alignItems: "center", gap: 8, padding: "0 14px 22px" }}>
+        <div style={{ width: 21, height: 21, background: T.red, borderRadius: 4, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 2, padding: 3 }}>
+          {[0, 1, 2, 3].map(i => <div key={i} style={{ background: "#fff", borderRadius: 1 }} />)}
+        </div>
+        <span style={{ fontFamily: FONT, fontWeight: 900, fontSize: 14.5, letterSpacing: "-0.02em" }}>MV3 CONNECT</span>
+      </div>
       {NAVS[role].map(([s, I, lbl]) => {
         const a = screen === s;
         return (
@@ -716,7 +742,7 @@ export default function App() {
           <div style={S.sub}>RC, AVS et registre du commerce contrôlés. Avis liés à de vrais chantiers.</div>
         </div>
       </Card>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 12 }}>
+      <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 12 }}>
         <KPI n="1'240" l="chantiers réalisés" c={T.red} /><KPI n="4.8" l="note moyenne" /><KPI n="24 h" l="1ʳᵉ offre en moy." />
       </div>
     </div>
@@ -1355,7 +1381,7 @@ export default function App() {
     return (
       <div style={{ padding: 16 }}>
         <h1 style={{ ...S.h1, margin: "10px 0 16px" }}>Statistiques</h1>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           <KPI n="42 %" l="taux de réussite" c={T.green} /><KPI n="61'069" l="CHF en jeu" c={T.red} />
           <KPI n="≈ 1 h" l="délai de réponse" /><KPI n="4.9 ★" l="note · 214 chantiers" />
         </div>
@@ -1437,7 +1463,7 @@ export default function App() {
     <div style={{ padding: 16 }}>
       <h1 style={{ ...S.h1, margin: "10px 0 4px" }}>Mes projets</h1>
       <p style={{ ...S.sub, margin: "0 0 14px" }}>Chantiers publiés pour {MY_ORG} — comparez les soumissions et adjugez.</p>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+      <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
         <KPI n={actifs.length} l="projets actifs" c={T.red} /><KPI n={totalSoum} l="soumissions reçues" />
       </div>
       <div style={S.label}>Actifs</div>
@@ -1491,7 +1517,7 @@ export default function App() {
     return (
     <div style={{ padding: 16 }}>
       <h1 style={{ ...S.h1, margin: "10px 0 16px" }}>Cockpit</h1>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+      <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
         <KPI n="14" l="demandes aujourd'hui" c={T.red} /><KPI n="5" l="à vérifier" c={T.amber} />
         <KPI n="38 %" l="taux de conversion" c={T.green} /><KPI n={totalCommissions.toLocaleString("fr-CH")} l="CHF commissions marketplace" />
       </div>
@@ -1729,7 +1755,7 @@ export default function App() {
     return (
       <div style={{ padding: 16 }}>
         <h1 style={{ ...S.h1, margin: "10px 0 16px" }}>Pilotage marketplace</h1>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           <KPI n={actifs} l="chantiers actifs" c={T.red} /><KPI n={tauxReponse + " %"} l="taux de réponse" c={T.green} />
           <KPI n="≈ 18 h" l="délai 1ʳᵉ soumission" /><KPI n={chiffreEnJeu.toLocaleString("fr-CH")} l="CHF en soumission" />
         </div>
@@ -1778,7 +1804,7 @@ export default function App() {
         </div>
 
         <div style={{ ...S.label, margin: "18px 0 8px" }}>Commissions de la marketplace</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+        <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
           <KPI n={factures.reduce((s, f) => s + f.commission, 0).toLocaleString("fr-CH")} l="CHF commissions totales" c={T.red} />
           <KPI n={factures.filter(f => f.statut === "Due").reduce((s, f) => s + f.commission, 0).toLocaleString("fr-CH")} l="CHF en attente de paiement" c={T.amber} />
         </div>
@@ -2477,21 +2503,23 @@ export default function App() {
 
   return (
     <div style={{ background: "#DDDBD2", minHeight: "100vh", fontFamily: FONT }}>
-      <div style={{ maxWidth: 480, margin: "0 auto", background: T.bg, minHeight: "100vh", paddingBottom: 90 }}>
+      <div className="app-shell" style={{ maxWidth: 480, margin: "0 auto", background: T.bg, minHeight: "100vh", paddingBottom: 90 }}>
         <Header />
-        {actionError && (
-          <div style={{ margin: "0 16px 10px", background: T.redBg, border: `1px solid ${T.red}`, borderRadius: 10, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-            <span style={{ fontFamily: FONT, fontSize: 12.5, fontWeight: 600, color: T.red }}>{actionError}</span>
-            <button onClick={() => setActionError("")} style={{ background: "none", border: "none", cursor: "pointer", flexShrink: 0, display: "flex" }}>
-              <X size={15} color={T.red} />
-            </button>
-          </div>
-        )}
-        {dataLoading && chantiers.length === 0 ? (
-          <div style={{ padding: 60, textAlign: "center" }}>
-            <Loader2 size={24} color={T.red} style={{ animation: "spin 1s linear infinite" }} />
-          </div>
-        ) : screens[screen]()}
+        <div className="app-main">
+          {actionError && (
+            <div style={{ margin: "0 16px 10px", background: T.redBg, border: `1px solid ${T.red}`, borderRadius: 10, padding: "10px 12px", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+              <span style={{ fontFamily: FONT, fontSize: 12.5, fontWeight: 600, color: T.red }}>{actionError}</span>
+              <button onClick={() => setActionError("")} style={{ background: "none", border: "none", cursor: "pointer", flexShrink: 0, display: "flex" }}>
+                <X size={15} color={T.red} />
+              </button>
+            </div>
+          )}
+          {dataLoading && chantiers.length === 0 ? (
+            <div style={{ padding: 60, textAlign: "center" }}>
+              <Loader2 size={24} color={T.red} style={{ animation: "spin 1s linear infinite" }} />
+            </div>
+          ) : screens[screen]()}
+        </div>
         <NavBar />
       </div>
     </div>
