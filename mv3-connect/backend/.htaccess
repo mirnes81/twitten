@@ -1,10 +1,22 @@
 # Empêche l'accès direct aux fichiers de configuration et de données.
-<FilesMatch "\.(sql|md|env)$">
-  Require all denied
-</FilesMatch>
-<FilesMatch "^config\.php$">
-  # config.php doit être exécuté (return array), jamais servi tel quel — PHP s'en charge déjà,
-  # cette règle est une protection supplémentaire si le moteur PHP venait à être désactivé.
-  Require all denied
-</FilesMatch>
+# Compatible Apache 2.2 (mod_access) et 2.4 (mod_authz_core), pour éviter
+# une erreur 500 si le module attendu n'est pas chargé sur l'hébergement.
+<IfModule mod_authz_core.c>
+  <FilesMatch "\.(sql|md|env)$">
+    Require all denied
+  </FilesMatch>
+  <FilesMatch "^config\.php$">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+  <FilesMatch "\.(sql|md|env)$">
+    Order allow,deny
+    Deny from all
+  </FilesMatch>
+  <FilesMatch "^config\.php$">
+    Order allow,deny
+    Deny from all
+  </FilesMatch>
+</IfModule>
 Options -Indexes

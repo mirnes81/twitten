@@ -1,5 +1,15 @@
 # Empêche l'exécution de scripts dans le dossier des fichiers uploadés.
-<FilesMatch "\.(php|php3|php4|php5|phtml|pl|py|cgi|sh)$">
-  Require all denied
-</FilesMatch>
+# Compatible Apache 2.2 (mod_access) et 2.4 (mod_authz_core), pour éviter
+# une erreur 500 si le module attendu n'est pas chargé sur l'hébergement.
+<IfModule mod_authz_core.c>
+  <FilesMatch "\.(php|php3|php4|php5|phtml|pl|py|cgi|sh)$">
+    Require all denied
+  </FilesMatch>
+</IfModule>
+<IfModule !mod_authz_core.c>
+  <FilesMatch "\.(php|php3|php4|php5|phtml|pl|py|cgi|sh)$">
+    Order allow,deny
+    Deny from all
+  </FilesMatch>
+</IfModule>
 Options -ExecCGI -Indexes
